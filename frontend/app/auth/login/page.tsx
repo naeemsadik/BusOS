@@ -65,7 +65,7 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
               <div>
                 <Label htmlFor="email">Email address</Label>
                 <Input

@@ -18,7 +18,7 @@
     --card-foreground: 222 29% 12%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 29% 12%;
-    --primary: 8 78% 58%;
+    --primary: 7 60% 49%;
     --primary-foreground: 0 0% 100%;
     --secondary: 38 30% 92%;
     --secondary-foreground: 222 29% 16%;
@@ -30,8 +30,8 @@
     --destructive-foreground: 0 0% 98%;
     --border: 32 18% 84%;
     --input: 32 18% 84%;
-    --ring: 8 78% 58%;
-    --chart-1: 8 78% 58%;
+    --ring: 7 60% 49%;
+    --chart-1: 7 60% 49%;
     --chart-2: 263 62% 58%;
     --chart-3: 158 57% 39%;
     --chart-4: 38 92% 50%;
@@ -39,12 +39,12 @@
     --radius: 0.75rem;
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 29% 16%;
-    --sidebar-primary: 8 78% 58%;
+    --sidebar-primary: 7 60% 49%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 263 72% 94%;
     --sidebar-accent-foreground: 263 52% 34%;
     --sidebar-border: 32 18% 84%;
-    --sidebar-ring: 8 78% 58%;
+    --sidebar-ring: 7 60% 49%;
   }
   .dark {
     --background: 225 24% 8%;
@@ -107,4 +107,8 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+[class~="text-[#e85f4c]"] {
+  color: #c74332 !important;
 }
