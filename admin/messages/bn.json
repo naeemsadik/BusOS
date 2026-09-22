@@ -1,0 +1,4 @@
+{
+  "common": {"language":"ভাষা","english":"English","bangla":"বাংলা","profile":"প্রোফাইল","logout":"লগ আউট","theme":"থিম","openMenu":"নেভিগেশন খুলুন","toggleSidebar":"সাইডবার পরিবর্তন করুন"},
+  "navigation": {"overview":"সারসংক্ষেপ","platform":"প্ল্যাটফর্ম","dashboard":"ড্যাশবোর্ড","organizations":"প্রতিষ্ঠান","subscriptions":"সাবস্ক্রিপশন","payments":"পেমেন্ট","sms":"এসএমএস","users":"ব্যবহারকারী","health":"প্ল্যাটফর্ম স্বাস্থ্য"}
+}

@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { SubscriptionGuard } from '@/components/subscription-guard';
 import { SubscriptionProvider } from '@/contexts/subscription-context';
 import Cookies from 'js-cookie';
+import { PageSkeleton } from '@/components/ui/page-primitives';
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -22,11 +23,7 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
 
   // Show loading state while checking authentication
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background dark:bg-background text-foreground dark:text-foreground">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <div className="min-h-screen bg-background p-6 sm:p-10"><PageSkeleton /></div>;
   }
 
   // Don't render children if not authenticated (redirect in progress)

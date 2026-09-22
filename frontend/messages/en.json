@@ -1,0 +1,42 @@
+{
+  "common": {
+    "language": "Language",
+    "english": "English",
+    "bangla": "বাংলা",
+    "theme": "Theme",
+    "profile": "Profile",
+    "logout": "Log out",
+    "loading": "Loading",
+    "openMenu": "Open navigation",
+    "closeMenu": "Close navigation",
+    "toggleSidebar": "Toggle sidebar"
+  },
+  "navigation": {
+    "sell": "Sell",
+    "catalog": "Catalog",
+    "operations": "Operations",
+    "growth": "Growth",
+    "account": "Account",
+    "dashboard": "Dashboard",
+    "pos": "POS",
+    "orders": "Orders",
+    "inventory": "Inventory",
+    "customers": "Customers",
+    "suppliers": "Suppliers",
+    "expenses": "Expenses",
+    "reports": "Reports",
+    "delivery": "Delivery",
+    "website": "Website",
+    "contentStudio": "Content Studio",
+    "sms": "SMS",
+    "subscription": "Subscription",
+    "settings": "Settings"
+  },
+  "states": {
+    "emptyTitle": "Nothing here yet",
+    "emptyDescription": "New records will appear here.",
+    "errorTitle": "We could not load this content",
+    "errorDescription": "Check your connection and try again.",
+    "retry": "Try again"
+  }
+}

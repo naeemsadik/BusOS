@@ -1,48 +1,68 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fbf8f2;
+  --foreground: #151923;
   --card: #ffffff;
-  --card-foreground: #171717;
+  --card-foreground: #151923;
   --popover: #ffffff;
-  --popover-foreground: #171717;
-  --primary: #3b82f6;
-  --primary-foreground: #f8fafc;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
-  --destructive: #dc2626;
-  --destructive-foreground: #f8fafc;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #3b82f6;
-  --radius: 0.5rem;
+  --popover-foreground: #151923;
+  --primary: #e85f4c;
+  --primary-foreground: #ffffff;
+  --secondary: #eee9df;
+  --secondary-foreground: #191d28;
+  --muted: #f0ece4;
+  --muted-foreground: #686b73;
+  --accent: #eee7fc;
+  --accent-foreground: #5d389d;
+  --destructive: #dc3030;
+  --destructive-foreground: #ffffff;
+  --border: #ddd5ca;
+  --input: #ddd5ca;
+  --ring: #e85f4c;
+  --success: #23875f;
+  --warning: #b36b00;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #191d28;
+  --sidebar-primary: #e85f4c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eee7fc;
+  --sidebar-accent-foreground: #5d389d;
+  --sidebar-border: #ddd5ca;
+  --sidebar-ring: #e85f4c;
+  --radius: 0.75rem;
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --card: #1a1a1a;
-  --card-foreground: #ededed;
-  --popover: #1a1a1a;
-  --popover-foreground: #ededed;
-  --primary: #3b82f6;
-  --primary-foreground: #f8fafc;
-  --secondary: #1e293b;
-  --secondary-foreground: #f1f5f9;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --accent: #1e293b;
-  --accent-foreground: #f1f5f9;
-  --destructive: #dc2626;
-  --destructive-foreground: #f8fafc;
-  --border: #334155;
-  --input: #334155;
-  --ring: #3b82f6;
+  --background: #0f1219;
+  --foreground: #f4efe6;
+  --card: #171b24;
+  --card-foreground: #f4efe6;
+  --popover: #171b24;
+  --popover-foreground: #f4efe6;
+  --primary: #f27664;
+  --primary-foreground: #10131a;
+  --secondary: #242934;
+  --secondary-foreground: #f4efe6;
+  --muted: #222731;
+  --muted-foreground: #a5a8b0;
+  --accent: #32264b;
+  --accent-foreground: #d6c2ff;
+  --destructive: #d94343;
+  --destructive-foreground: #ffffff;
+  --border: #303642;
+  --input: #303642;
+  --ring: #f27664;
+  --success: #4fc792;
+  --warning: #f2ac45;
+  --sidebar: #0c0f15;
+  --sidebar-foreground: #f4efe6;
+  --sidebar-primary: #f27664;
+  --sidebar-primary-foreground: #10131a;
+  --sidebar-accent: #32264b;
+  --sidebar-accent-foreground: #d6c2ff;
+  --sidebar-border: #252a34;
+  --sidebar-ring: #f27664;
 }
 
 @theme inline {
@@ -65,24 +85,35 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-sans: var(--font-manrope);
   --border-radius: var(--radius);
 }
 
 * {
-  border-color: hsl(var(--border));
+  border-color: var(--border);
 }
 
 body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  min-width: 320px;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-manrope), var(--font-bangla), sans-serif;
+  font-feature-settings: "ss01" 1, "tnum" 1;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

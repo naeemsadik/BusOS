@@ -1,0 +1,4 @@
+{
+  "common": {"language":"Language","english":"English","bangla":"বাংলা","profile":"Profile","logout":"Log out","theme":"Theme","openMenu":"Open navigation","toggleSidebar":"Toggle sidebar"},
+  "navigation": {"overview":"Overview","platform":"Platform","dashboard":"Dashboard","organizations":"Organizations","subscriptions":"Subscriptions","payments":"Payments","sms":"SMS","users":"Users","health":"Platform health"}
+}

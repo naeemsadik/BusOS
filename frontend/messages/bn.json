@@ -1,0 +1,42 @@
+{
+  "common": {
+    "language": "ভাষা",
+    "english": "English",
+    "bangla": "বাংলা",
+    "theme": "থিম",
+    "profile": "প্রোফাইল",
+    "logout": "লগ আউট",
+    "loading": "লোড হচ্ছে",
+    "openMenu": "নেভিগেশন খুলুন",
+    "closeMenu": "নেভিগেশন বন্ধ করুন",
+    "toggleSidebar": "সাইডবার পরিবর্তন করুন"
+  },
+  "navigation": {
+    "sell": "বিক্রয়",
+    "catalog": "ক্যাটালগ",
+    "operations": "পরিচালনা",
+    "growth": "প্রবৃদ্ধি",
+    "account": "অ্যাকাউন্ট",
+    "dashboard": "ড্যাশবোর্ড",
+    "pos": "পিওএস",
+    "orders": "অর্ডার",
+    "inventory": "ইনভেন্টরি",
+    "customers": "ক্রেতা",
+    "suppliers": "সরবরাহকারী",
+    "expenses": "খরচ",
+    "reports": "রিপোর্ট",
+    "delivery": "ডেলিভারি",
+    "website": "ওয়েবসাইট",
+    "contentStudio": "কনটেন্ট স্টুডিও",
+    "sms": "এসএমএস",
+    "subscription": "সাবস্ক্রিপশন",
+    "settings": "সেটিংস"
+  },
+  "states": {
+    "emptyTitle": "এখনও কিছু নেই",
+    "emptyDescription": "নতুন তথ্য এখানে দেখা যাবে।",
+    "errorTitle": "তথ্য লোড করা যায়নি",
+    "errorDescription": "ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।",
+    "retry": "আবার চেষ্টা করুন"
+  }
+}

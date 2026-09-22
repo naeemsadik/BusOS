@@ -5,6 +5,10 @@ import { Admin } from '../lib/types';
 import { adminService } from '../lib/admin-service';
 import { mockAdmin, DEMO_TOKEN } from '../lib/mock-data';
 
+const fixturesEnabled =
+  process.env.NODE_ENV === 'development' &&
+  process.env.NEXT_PUBLIC_ENABLE_FIXTURES === 'true';
+
 interface AdminContextType {
   admin: Admin | null;
   isLoading: boolean;
@@ -28,9 +32,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const checkAuthStatus = async () => {
     try {
       const token = localStorage.getItem('admin_token');
-      const isDemo =
+      const isDemo = fixturesEnabled && (
         localStorage.getItem('admin_demo_mode') === 'true' ||
-        token === DEMO_TOKEN;
+        token === DEMO_TOKEN);
 
       if (token) {
         if (isDemo) {
@@ -61,7 +65,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       (trimmedUser === 'admin' || trimmedUser === 'demo' || trimmedUser === 'admin@pos-system.local') &&
       (password === 'admin' || password === 'admin123' || password === 'demo123');
 
-    if (isDemoCreds) {
+    if (fixturesEnabled && isDemoCreds) {
       localStorage.setItem('admin_token', DEMO_TOKEN);
       localStorage.setItem('admin_demo_mode', 'true');
       setAdmin(mockAdmin);
@@ -80,13 +84,6 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       
       setAdmin(response.admin);
     } catch (error) {
-      // If backend is offline and user attempted admin login, fall back to demo mode smoothly
-      if (trimmedUser === 'admin') {
-        localStorage.setItem('admin_token', DEMO_TOKEN);
-        localStorage.setItem('admin_demo_mode', 'true');
-        setAdmin(mockAdmin);
-        return;
-      }
       throw error;
     }
   };
@@ -104,9 +101,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAdmin = async () => {
     try {
-      const isDemo =
+      const isDemo = fixturesEnabled && (
         localStorage.getItem('admin_demo_mode') === 'true' ||
-        localStorage.getItem('admin_token') === DEMO_TOKEN;
+        localStorage.getItem('admin_token') === DEMO_TOKEN);
 
       if (isDemo) {
         setAdmin(mockAdmin);
@@ -120,9 +117,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const isDemoMode =
+  const isDemoMode = fixturesEnabled && (
     admin?.id === mockAdmin.id ||
-    (typeof window !== 'undefined' && localStorage.getItem('admin_demo_mode') === 'true');
+    (typeof window !== 'undefined' && localStorage.getItem('admin_demo_mode') === 'true'));
 
   const value = {
     admin,

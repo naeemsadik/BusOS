@@ -1,6 +1,6 @@
 'use client';
 
-import { Moon, Sun, Monitor } from 'lucide-react';
+import { Check, Moon, Sun, Monitor } from 'lucide-react';
 import { Button } from './button';
 import {
   DropdownMenu,
@@ -26,17 +26,17 @@ export function ThemeToggle() {
         <DropdownMenuItem onClick={() => setTheme('light')} className="cursor-pointer">
           <Sun className="mr-2 h-4 w-4" />
           <span>Light</span>
-          {theme === 'light' && <span className="ml-auto">✓</span>}
+          {theme === 'light' && <Check className="ml-auto h-4 w-4" />}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme('dark')} className="cursor-pointer">
           <Moon className="mr-2 h-4 w-4" />
           <span>Dark</span>
-          {theme === 'dark' && <span className="ml-auto">✓</span>}
+          {theme === 'dark' && <Check className="ml-auto h-4 w-4" />}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme('system')} className="cursor-pointer">
           <Monitor className="mr-2 h-4 w-4" />
           <span>System</span>
-          {theme === 'system' && <span className="ml-auto">✓</span>}
+          {theme === 'system' && <Check className="ml-auto h-4 w-4" />}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

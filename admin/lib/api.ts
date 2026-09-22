@@ -33,6 +33,7 @@ export const api = axios.create({
 
 export function isDemoActive(): boolean {
   if (typeof window === 'undefined') return false;
+  if (process.env.NODE_ENV !== 'development' || process.env.NEXT_PUBLIC_ENABLE_FIXTURES !== 'true') return false;
   const token = localStorage.getItem('admin_token');
   const demoMode = localStorage.getItem('admin_demo_mode');
   return demoMode === 'true' || token === DEMO_TOKEN;
@@ -195,9 +196,8 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response: any) => response,
   async (error: any) => {
-    // If backend is down/unreachable, gracefully fall back to mock data
-    const isNetworkError = !error?.response || error?.code === 'ERR_NETWORK' || error?.code === 'ECONNREFUSED';
-    if (isDemoActive() || isNetworkError) {
+    // Fixture responses are only available through the explicit development flag.
+    if (isDemoActive()) {
       const mockData = getMockResponse(error?.config);
       if (mockData !== null) {
         return {

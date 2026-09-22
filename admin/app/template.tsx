@@ -1,207 +1,102 @@
-'use client';
+"use client"
 
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import Link from 'next/link';
-import { 
-  BarChart3, 
-  Users, 
-  Building2, 
-  CreditCard, 
-  Settings, 
-  LogOut,
-  Shield,
-  Menu,
-  X,
-  MessageSquare
-} from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Avatar, AvatarFallback } from '../components/ui/avatar';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from '../components/ui/dropdown-menu';
-import { useAdmin } from '../contexts/admin-context';
-import { ThemeToggle } from '../components/ui/theme-toggle';
-import { toast } from 'sonner';
+import { useEffect } from "react"
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
+import { BarChart3, Building2, CreditCard, LogOut, MessageSquare, ShieldCheck, Users } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton,
+  SidebarMenuItem, SidebarProvider, SidebarRail, SidebarTrigger,
+} from "@/components/ui/sidebar"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Separator } from "@/components/ui/separator"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { LocaleToggle } from "@/components/locale-toggle"
+import { useAdmin } from "@/contexts/admin-context"
+
+const groups = [
+  { label: "overview", items: [
+    { label: "dashboard", href: "/dashboard", icon: BarChart3 },
+  ]},
+  { label: "platform", items: [
+    { label: "organizations", href: "/organizations", icon: Building2 },
+    { label: "subscriptions", href: "/subscriptions", icon: CreditCard },
+    { label: "payments", href: "/payments", icon: CreditCard },
+    { label: "sms", href: "/dashboard/sms", icon: MessageSquare },
+    { label: "users", href: "/dashboard/users", icon: Users },
+  ]},
+] as const
+
+function AdminSidebar() {
+  const pathname = usePathname()
+  const t = useTranslations("navigation")
+  const common = useTranslations("common")
+  const router = useRouter()
+  const { admin, isDemoMode, logout } = useAdmin()
+  const handleLogout = () => { logout(); router.push("/login") }
+
+  return <Sidebar collapsible="icon" variant="inset">
+    <SidebarHeader className="border-b border-sidebar-border p-3">
+      <div className="flex h-10 items-center gap-3 px-1">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground"><ShieldCheck className="size-5" /></span>
+        <div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-bold">BusOS Control</p><p className="truncate text-xs text-muted-foreground">Platform operations</p></div>
+      </div>
+      {isDemoMode && <Badge variant="outline" className="mx-1 w-fit group-data-[collapsible=icon]:hidden">Development fixtures</Badge>}
+    </SidebarHeader>
+    <SidebarContent className="py-2">
+      {groups.map(group => <SidebarGroup key={group.label} className="py-1">
+        <SidebarGroupLabel>{t(group.label)}</SidebarGroupLabel>
+        <SidebarGroupContent><SidebarMenu>{group.items.map(item => <SidebarMenuItem key={item.href}>
+          <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={t(item.label)}><Link href={item.href}><item.icon /><span>{t(item.label)}</span></Link></SidebarMenuButton>
+        </SidebarMenuItem>)}</SidebarMenu></SidebarGroupContent>
+      </SidebarGroup>)}
+    </SidebarContent>
+    <SidebarFooter className="border-t border-sidebar-border p-2">
+      <SidebarMenu><SidebarMenuItem><DropdownMenu>
+        <DropdownMenuTrigger asChild><SidebarMenuButton size="lg" tooltip={common("profile")}>
+          <Avatar className="size-8 rounded-lg"><AvatarFallback className="rounded-lg bg-accent text-accent-foreground">{admin?.firstName?.[0]}{admin?.lastName?.[0]}</AvatarFallback></Avatar>
+          <div className="min-w-0 flex-1 text-left text-sm leading-tight"><span className="block truncate font-semibold">{admin?.firstName} {admin?.lastName}</span><span className="block truncate text-xs text-muted-foreground">{admin?.email}</span></div>
+        </SidebarMenuButton></DropdownMenuTrigger>
+        <DropdownMenuContent side="right" align="end" className="w-56"><DropdownMenuLabel>{admin?.email}</DropdownMenuLabel><DropdownMenuSeparator /><DropdownMenuItem onClick={handleLogout}><LogOut className="mr-2 size-4" />{common("logout")}</DropdownMenuItem></DropdownMenuContent>
+      </DropdownMenu></SidebarMenuItem></SidebarMenu>
+    </SidebarFooter>
+    <SidebarRail />
+  </Sidebar>
+}
+
+function LoadingShell() {
+  return <div className="min-h-screen bg-background p-6 sm:p-10" role="status" aria-label="Loading"><div className="mx-auto max-w-7xl space-y-6"><Skeleton className="h-9 w-56" /><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)}</div><Skeleton className="h-96 rounded-xl" /></div></div>
+}
 
 export default function AdminTemplate({ children }: { children: React.ReactNode }) {
-  const { admin, isLoading, isAuthenticated, isDemoMode, logout } = useAdmin();
-  const router = useRouter();
-  const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isLoading, isAuthenticated } = useAdmin()
+  const router = useRouter()
+  const pathname = usePathname()
+  const t = useTranslations("common")
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && pathname !== '/login') {
-      router.push('/login');
-    }
-  }, [isLoading, isAuthenticated, pathname, router]);
+    if (!isLoading && !isAuthenticated && pathname !== "/login") router.push("/login")
+  }, [isLoading, isAuthenticated, pathname, router])
 
-  const handleLogout = () => {
-    logout();
-    toast.success('Logged out successfully');
-    router.push('/login');
-  };
+  if (isLoading) return <LoadingShell />
+  if (!isAuthenticated && pathname !== "/login") return null
+  if (pathname === "/login") return <>{children}</>
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated && pathname !== '/login') {
-    return null;
-  }
-
-  if (pathname === '/login') {
-    return <>{children}</>;
-  }
-
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
-    { name: 'Organizations', href: '/organizations', icon: Building2 },
-    { name: 'Users', href: '/dashboard/users', icon: Users },
-    { name: 'Subscriptions', href: '/subscriptions', icon: CreditCard },
-    { name: 'SMS', href: '/dashboard/sms', icon: MessageSquare },
-  ];
-
-  return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-50 w-64 sm:w-72 bg-card border-r border-border shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
-        <div className="flex items-center justify-between h-16 px-4 sm:px-6 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Shield className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
-            <span className="text-lg sm:text-xl font-bold text-foreground">Admin Portal</span>
-            {isDemoMode && (
-              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800">
-                Demo
-              </Badge>
-            )}
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-
-        <nav className="flex-1 px-3 sm:px-4 py-6 space-y-1 overflow-y-auto">
-          {navigation.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
-            
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center px-3 sm:px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground active:scale-[0.98]'
-                }`}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                <span className="truncate">{item.name}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col lg:ml-0 overflow-hidden">
-        {/* Header */}
-        <header className="bg-card border-b border-border h-14 sm:h-16 flex items-center justify-between px-4 sm:px-6 flex-shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Open menu</span>
-          </Button>
-
-          {/* Mobile title with demo indicator */}
-          <div className="flex items-center gap-2 lg:hidden">
-            <Shield className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-sm">Admin</span>
-            {isDemoMode && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800">
-                Demo
-              </Badge>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-4 ml-auto">
-            <ThemeToggle />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-                      {admin?.firstName?.[0]}{admin?.lastName?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {admin?.firstName} {admin?.lastName}
-                    </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {admin?.email}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/settings" className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
-
-        {/* Main content area */}
-        <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
-          {children}
-        </main>
-      </div>
-
-      {/* Overlay for mobile */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity"
-          onClick={() => setSidebarOpen(false)}
-          aria-label="Close sidebar"
-        />
-      )}
-    </div>
-  );
+  return <SidebarProvider defaultOpen>
+    <AdminSidebar />
+    <SidebarInset className="min-w-0 bg-background">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/85 px-4 backdrop-blur-xl md:px-6">
+        <SidebarTrigger aria-label={t("toggleSidebar")} />
+        <Separator orientation="vertical" className="mr-2 h-4" />
+        <span className="text-sm font-semibold text-muted-foreground">Internal operations</span>
+        <div className="ml-auto flex items-center gap-1"><LocaleToggle /><ThemeToggle /></div>
+      </header>
+      <main className="flex-1 overflow-x-hidden p-4 sm:p-6 lg:p-8">{children}</main>
+    </SidebarInset>
+  </SidebarProvider>
 }
