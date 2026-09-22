@@ -6,6 +6,7 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
+    "check:ui": "node ../scripts/check-ui-glyphs.mjs .",
     "start": "next start"
   },
   "dependencies": {

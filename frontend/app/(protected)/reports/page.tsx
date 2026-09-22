@@ -86,7 +86,7 @@ function ReportsPageContent() {
       })
       
       toast({
-        title: '🎉 PDF Export Successful!',
+        title: 'PDF export successful',
         description: 'Your comprehensive profit analysis report has been downloaded with beautiful formatting and insights.',
         variant: 'default',
       })
@@ -145,7 +145,7 @@ function ReportsPageContent() {
       setCostIssuesFound(0)
       
       toast({
-        title: '✅ Cost Issues Fixed!',
+        title: 'Cost issues fixed',
         description: 'Cost issues were corrected and profit analysis has been updated.',
         variant: 'default',
       })
@@ -276,7 +276,7 @@ function ReportsPageContent() {
                   </Button>
                 </div>
               ) : (
-                "✅ All order items have correct cost data. Your profit calculations are accurate!"
+                <span className="inline-flex items-center gap-2"><CheckCircle className="size-4 text-emerald-600" />All order items have correct cost data. Your profit calculations are accurate.</span>
               )}
             </AlertDescription>
           </div>

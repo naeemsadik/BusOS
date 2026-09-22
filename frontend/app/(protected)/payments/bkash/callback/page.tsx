@@ -35,7 +35,7 @@ function BkashCallbackContent() {
   }, [searchParams]);
 
   const processCallback = async (data: CallbackStatus) => {
-    console.log('🔄 Processing bKash callback:', data);
+    console.log('Processing bKash callback:', data);
     
     try {
       // Simulate processing time
@@ -61,7 +61,7 @@ function BkashCallbackContent() {
         }, 5000);
       }
     } catch (error) {
-      console.error('❌ Error processing callback:', error);
+      console.error('Error processing callback:', error);
       setFinalStatus('failure');
       setTimeout(() => {
         router.push(`/payments/failure?paymentID=${data.paymentID}&error=${encodeURIComponent('Processing error')}`);

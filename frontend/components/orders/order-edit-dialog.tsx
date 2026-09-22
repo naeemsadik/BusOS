@@ -18,7 +18,8 @@ import {
   Calculator,
   Save,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  ArrowRight
 } from "lucide-react"
 import { Order } from "@/lib/orders-service"
 import { Product, ProductQuery, inventoryService } from "@/lib/inventory-service"
@@ -805,7 +806,7 @@ export default function OrderEditDialog({
                     <div className="flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 text-yellow-600" />
                       <span className="text-sm text-yellow-800 dark:text-yellow-200">
-                        Order total has changed: ৳{(order.total || 0).toLocaleString()} → ৳{(total || 0).toLocaleString()}
+                        Order total has changed: ৳{(order.total || 0).toLocaleString()} <ArrowRight className="mx-1 inline size-4" aria-hidden="true" /> ৳{(total || 0).toLocaleString()}
                       </span>
                     </div>
                   </div>

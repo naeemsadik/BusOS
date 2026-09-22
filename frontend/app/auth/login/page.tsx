@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Eye, EyeOff, KeyRound, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,13 +43,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900 dark:text-white">
+          <h2 className="mt-6 text-3xl font-extrabold text-foreground">
             Sign in to your account
           </h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-sm text-muted-foreground">
             Or{' '}
             <Link href="/auth/register" className="font-medium text-primary hover:text-primary/90">
               create a new account
@@ -66,19 +66,6 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div className="rounded-lg border border-blue-200 bg-blue-50/80 p-3 text-blue-950 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-100">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <KeyRound className="h-4 w-4" />
-                  Demo account
-                </div>
-                <dl className="mt-2 grid gap-1 text-xs sm:grid-cols-[4.5rem_1fr]">
-                  <dt className="text-blue-700 dark:text-blue-300">Email</dt>
-                  <dd className="select-all break-all font-mono">naeemabdullahsadik@gmail.com</dd>
-                  <dt className="text-blue-700 dark:text-blue-300">Password</dt>
-                  <dd className="select-all font-mono">12345678</dd>
-                </dl>
-              </div>
-
               <div>
                 <Label htmlFor="email">Email address</Label>
                 <Input
@@ -108,11 +95,12 @@ export default function LoginPage() {
                     type="button"
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
                     ) : (
-                      <Eye className="h-4 w-4 text-gray-400" />
+                      <Eye className="h-4 w-4 text-muted-foreground" />
                     )}
                   </button>
                 </div>
@@ -149,7 +137,7 @@ export default function LoginPage() {
         </Card>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             Don't have an account?{' '}
             <Link href="/auth/register" className="text-primary hover:text-primary/90">
               Sign up

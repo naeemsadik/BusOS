@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Truck, Home, Package, Bike, Banknote, CreditCard, Smartphone, MapPin, ArrowRight, CheckCircle } from "lucide-react";
+import { Truck, Home, Package, Bike, Banknote, CreditCard, Smartphone, MapPin, ArrowRight, CheckCircle, X } from "lucide-react";
 import { deliveryService } from "../../lib/delivery-service";
 import { toast } from "sonner";
 import { OrderDetails } from "./types";
@@ -339,7 +339,7 @@ export function DeliveryOptions({ orderDetails, onUpdateOrderDetails, total = 0,
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Checkout Journey</h2>
                 <button onClick={() => setShowDeliveryDialog(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                  ✕
+                  <X className="size-4" aria-hidden="true" />
                 </button>
               </div>
               <div className="mt-4 flex items-center justify-between">
@@ -653,8 +653,8 @@ export function DeliveryOptions({ orderDetails, onUpdateOrderDetails, total = 0,
                               value={orderDetails.steadfastDeliveryType || "0"}
                               onChange={(e) => onUpdateOrderDetails({ steadfastDeliveryType: Number(e.target.value) as 0 | 1 })}
                             >
-                              <option value="0">🏠 Home Delivery</option>
-                              <option value="1">📍 Hub Pickup</option>
+                              <option value="0">Home Delivery</option>
+                              <option value="1">Hub Pickup</option>
                             </select>
                           </div>
                         </div>

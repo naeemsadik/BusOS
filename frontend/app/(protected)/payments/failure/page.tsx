@@ -49,7 +49,7 @@ export default function PaymentFailurePage() {
             </svg>
           </div>
           <h1 className="mt-4 text-xl font-semibold text-gray-900">
-            Payment Failed ❌
+            Payment failed
           </h1>
           <p className="mt-2 text-sm text-gray-600">
             Unfortunately, your payment could not be processed. Please try again.

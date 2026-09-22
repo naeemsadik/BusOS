@@ -49,7 +49,7 @@ export default function PaymentSuccessPage() {
             </svg>
           </div>
           <h1 className="mt-4 text-xl font-semibold text-gray-900">
-            Payment Successful! 🎉
+            Payment successful
           </h1>
           <p className="mt-2 text-sm text-gray-600">
             Your payment has been completed successfully. Thank you for your purchase!

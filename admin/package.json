@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "check:ui": "node ../scripts/check-ui-glyphs.mjs .",
     "start": "next start",
     "lint": "next lint"
   },

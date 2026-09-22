@@ -109,7 +109,7 @@ function ResetPasswordForm() {
 
   if (!isValidToken) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-gray-900 p-4">
+      <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <Card>
             <CardHeader className="text-center">
@@ -140,7 +140,7 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-gray-900 p-4">
+    <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
@@ -294,7 +294,7 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-gray-900 p-4">
+      <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <Card>
             <CardContent className="pt-6">

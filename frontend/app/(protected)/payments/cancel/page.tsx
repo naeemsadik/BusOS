@@ -46,7 +46,7 @@ export default function PaymentCancelPage() {
             </svg>
           </div>
           <h1 className="mt-4 text-xl font-semibold text-gray-900">
-            Payment Cancelled ⚠️
+            Payment cancelled
           </h1>
           <p className="mt-2 text-sm text-gray-600">
             You have cancelled the payment process. No charges have been made to your account.
