@@ -103,5 +103,23 @@
     "actions": "Actions",
     "empty": "No orders match these filters",
     "loading": "Loading orders"
+  },
+  "pos": {
+    "eyebrow": "Fast checkout",
+    "title": "Point of sale",
+    "description": "Find products, build the cart, and complete a sale without losing context.",
+    "voice": "Voice invoice",
+    "search": "Search products or scan a barcode",
+    "cart": "Cart",
+    "items": "{count, plural, one {# item} other {# items}}",
+    "stockLeft": "{count} left",
+    "add": "Add {product} to cart",
+    "checkout": "Review cart · {total}",
+    "orderSummary": "Order summary",
+    "emptyCart": "Add a product to start a sale.",
+    "complete": "Complete sale",
+    "processing": "Processing sale",
+    "subtotal": "Subtotal",
+    "total": "Total"
   }
 }
