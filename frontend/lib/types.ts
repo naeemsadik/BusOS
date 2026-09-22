@@ -6,6 +6,7 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   isEmailVerified: boolean;
+  locale?: 'en' | 'bn';
   organizationId?: string;
   organization?: Organization;
   createdAt: string;

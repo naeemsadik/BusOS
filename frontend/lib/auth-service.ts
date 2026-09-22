@@ -58,6 +58,11 @@ export const authService = {
     return response.data;
   },
 
+  async updateLocale(locale: 'en' | 'bn'): Promise<{ locale: 'en' | 'bn' }> {
+    const response = await api.patch('/auth/profile/locale', { locale });
+    return response.data;
+  },
+
   // Invitations
   async inviteUser(data: InviteUserRequest): Promise<ApiResponse> {
     const response = await api.post('/auth/invite', data);

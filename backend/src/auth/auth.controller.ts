@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Patch,
   Body,
   Get,
   Delete,
@@ -26,6 +27,7 @@ import {
   ChangePasswordDto,
   InviteUserDto,
   AcceptInvitationDto,
+  UpdateLocaleDto,
 } from './dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
@@ -135,6 +137,14 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User profile retrieved successfully' })
   async getProfile(@CurrentUser() user: User) {
     return this.authService.getProfile(user.id);
+  }
+
+  @Patch('profile/locale')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update the user interface locale' })
+  async updateLocale(@CurrentUser() user: User, @Body() dto: UpdateLocaleDto) {
+    return this.authService.updateLocale(user.id, dto.locale);
   }
   
   @Get('invitations')

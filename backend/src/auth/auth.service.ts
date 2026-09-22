@@ -170,6 +170,7 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
+        locale: user.locale,
         organization: user.organization,
       },
     };
@@ -445,7 +446,7 @@ export class AuthService {
     const user = await this.userRepository.findOne({
       where: { id: userId },
       relations: ['organization', 'organization.subscription'],
-      select: ['id', 'email', 'firstName', 'lastName', 'role', 'status', 'isEmailVerified', 'createdAt'],
+      select: ['id', 'email', 'firstName', 'lastName', 'role', 'status', 'isEmailVerified', 'locale', 'createdAt'],
     });
 
     if (!user) {
@@ -453,6 +454,12 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  async updateLocale(userId: string, locale: 'en' | 'bn') {
+    const result = await this.userRepository.update(userId, { locale });
+    if (!result.affected) throw new NotFoundException('User not found');
+    return { locale };
   }
   
   async getInvitations(organizationId: string) {

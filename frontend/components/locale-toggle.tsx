@@ -10,13 +10,21 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { authService } from "@/lib/auth-service"
+
+export function writeLocaleCookie(nextLocale: "en" | "bn", target: Pick<Document, "cookie"> = document) {
+  target.cookie = `BUSOS_LOCALE=${nextLocale};path=/;max-age=31536000;samesite=lax`
+}
 
 export function LocaleToggle({ compact = false }: { compact?: boolean }) {
   const locale = useLocale()
   const t = useTranslations("common")
 
-  const selectLocale = (nextLocale: "en" | "bn") => {
-    document.cookie = `BUSOS_LOCALE=${nextLocale};path=/;max-age=31536000;samesite=lax`
+  const selectLocale = async (nextLocale: "en" | "bn") => {
+    writeLocaleCookie(nextLocale)
+    if (document.cookie.includes("access_token=")) {
+      await authService.updateLocale(nextLocale).catch(() => undefined)
+    }
     window.location.reload()
   }
 

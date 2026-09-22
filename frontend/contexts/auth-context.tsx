@@ -64,6 +64,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sameSite: 'lax',
         path: '/',
       });
+      if (response.user.locale) {
+        Cookies.set('BUSOS_LOCALE', response.user.locale, {
+          expires: 365,
+          sameSite: 'lax',
+          path: '/',
+        });
+      }
       setUser(response.user);
 
       // Check subscription status first

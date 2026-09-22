@@ -90,6 +90,9 @@ export class User {
   @Column({ type: 'varchar', default: 'Bangladeshi Taka', length: 100 })
   currencyName: string;
 
+  @Column({ type: 'varchar', default: 'en', length: 2 })
+  locale: 'en' | 'bn';
+
   @OneToMany(() => Invitation, (invitation) => invitation.invitedBy)
   sentInvitations: Invitation[];
 

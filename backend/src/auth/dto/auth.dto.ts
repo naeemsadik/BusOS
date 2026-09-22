@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsOptional, IsIn } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({ example: 'john@example.com' })
@@ -72,4 +72,10 @@ export class ChangePasswordDto {
   @IsString()
   @MinLength(8)
   newPassword: string;
+}
+
+export class UpdateLocaleDto {
+  @ApiProperty({ enum: ['en', 'bn'] })
+  @IsIn(['en', 'bn'])
+  locale: 'en' | 'bn';
 }
