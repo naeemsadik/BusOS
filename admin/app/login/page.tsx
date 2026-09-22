@@ -11,6 +11,10 @@ import { Alert, AlertDescription } from '../../components/ui/alert';
 import { useAdmin } from '../../contexts/admin-context';
 import { toast } from 'sonner';
 
+const fixturesEnabled =
+  process.env.NODE_ENV === 'development' &&
+  process.env.NEXT_PUBLIC_ENABLE_FIXTURES === 'true';
+
 export default function AdminLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -31,7 +35,7 @@ export default function AdminLoginPage() {
       toast.success('Logged in successfully!');
       router.push('/dashboard');
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Login failed. Try the demo credentials below.';
+      const message = error.response?.data?.message || 'Login failed. Check your credentials and try again.';
       setError(message);
       toast.error(message);
     } finally {
@@ -72,12 +76,11 @@ export default function AdminLoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Demo Credentials Info Box */}
-          <div className="rounded-lg border border-blue-200 bg-blue-50/80 p-3.5 text-sm dark:border-blue-900/60 dark:bg-blue-950/40">
+          {fixturesEnabled && <div className="rounded-lg border border-violet-200 bg-violet-50/80 p-3.5 text-sm dark:border-violet-900/60 dark:bg-violet-950/40">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
                 <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                Demo Credentials
+                Development fixtures
               </span>
               <button
                 type="button"
@@ -97,7 +100,7 @@ export default function AdminLoginPage() {
                 <code className="rounded bg-white/80 dark:bg-slate-900 px-1.5 py-0.5 font-mono font-bold text-blue-900 dark:text-blue-200 border border-blue-200/60 dark:border-blue-800">admin123</code>
               </div>
             </div>
-          </div>
+          </div>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
@@ -111,7 +114,7 @@ export default function AdminLoginPage() {
               <Input
                 id="username"
                 type="text"
-                placeholder="Enter your username (e.g. admin)"
+                  placeholder="Enter your username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -125,7 +128,7 @@ export default function AdminLoginPage() {
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password (e.g. admin123)"
+                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -137,6 +140,7 @@ export default function AdminLoginPage() {
                   size="sm"
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -163,7 +167,7 @@ export default function AdminLoginPage() {
             </Button>
           </form>
 
-          <div className="relative my-2">
+          {fixturesEnabled && <><div className="relative my-2">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-border" />
             </div>
@@ -181,7 +185,7 @@ export default function AdminLoginPage() {
           >
             <Sparkles className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
             Quick Demo Login (1-Click)
-          </Button>
+          </Button></>}
         </CardContent>
       </Card>
     </div>

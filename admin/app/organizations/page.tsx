@@ -9,8 +9,7 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  Search,
-  Filter
+  Search
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -162,10 +161,6 @@ export default function AdminOrganizationsPage() {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline" size="sm" className="w-full sm:w-auto">
-              <Filter className="mr-2 h-4 w-4" />
-              Filter
-            </Button>
           </div>
 
           {/* Organizations Table */}
