@@ -26,6 +26,7 @@ import {
 import { adminService } from '../../../lib/admin-service';
 import { toast } from 'sonner';
 import { useAdminCurrency } from '../../../contexts/currency-context';
+import { DataState, PageHeader, PageSkeleton } from '@/components/ui/page-primitives';
 
 interface SmsSettings {
   pricePerSms: number;
@@ -78,6 +79,7 @@ export default function AdminSmsPage() {
   const [globalStats, setGlobalStats] = useState<SmsGlobalStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     loadSmsData();
@@ -85,6 +87,7 @@ export default function AdminSmsPage() {
 
   const loadSmsData = async () => {
     try {
+      setLoadError('');
       const [settingsData, statsData] = await Promise.all([
         adminService.getSmsSettings(),
         adminService.getSmsGlobalStats(),
@@ -122,6 +125,7 @@ export default function AdminSmsPage() {
       setGlobalStats(safeStats);
     } catch (error: any) {
       console.error('Failed to load SMS data:', error);
+      setLoadError(error?.response?.data?.message || 'SMS data could not be loaded.');
       toast.error('Failed to load SMS data');
     } finally {
       setLoading(false);
@@ -160,21 +164,13 @@ export default function AdminSmsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
+  if (loadError && !globalStats) return <DataState title="SMS operations unavailable" description={loadError} onRetry={loadSmsData} />;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">SMS Management</h1>
-          <p className="text-muted-foreground">Configure SMS pricing and monitor usage across all organizations</p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-[100rem] space-y-6">
+      <PageHeader title="SMS operations" description="Configure SMS pricing and monitor usage across tenant organizations." />
 
       {/* Global SMS Stats */}
       <div className="grid gap-4 md:grid-cols-4">

@@ -20,6 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { adminService } from '../../lib/admin-service';
 import { AdminOrganizationItem, SubscriptionStatus } from '../../lib/types';
 import { toast } from 'sonner';
+import { DataState, MetricCard, PageHeader, PageSkeleton } from '@/components/ui/page-primitives';
 
 export default function AdminOrganizationsPage() {
   const [organizations, setOrganizations] = useState<AdminOrganizationItem[]>([]);
@@ -28,6 +29,7 @@ export default function AdminOrganizationsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   const pageSize = 10;
 
@@ -38,12 +40,14 @@ export default function AdminOrganizationsPage() {
   const loadOrganizations = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const response = await adminService.getOrganizations(currentPage, pageSize);
       setOrganizations(response.organizations);
       setTotalPages(response.totalPages);
       setTotal(response.total);
     } catch (error: any) {
       console.error('Failed to load organizations:', error);
+      setLoadError(error?.response?.data?.message || 'Organizations could not be loaded.');
       toast.error('Failed to load organizations');
     } finally {
       setLoading(false);
@@ -52,11 +56,11 @@ export default function AdminOrganizationsPage() {
 
   const getStatusBadge = (status: SubscriptionStatus) => {
     const variants = {
-      [SubscriptionStatus.TRIAL]: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-      [SubscriptionStatus.ACTIVE]: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-      [SubscriptionStatus.EXPIRED]: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-      [SubscriptionStatus.CANCELLED]: 'bg-gray-100 text-gray-800 dark:bg-gray-800/30 dark:text-gray-400',
-      [SubscriptionStatus.SUSPENDED]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+      [SubscriptionStatus.TRIAL]: 'border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300',
+      [SubscriptionStatus.ACTIVE]: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+      [SubscriptionStatus.EXPIRED]: 'border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300',
+      [SubscriptionStatus.CANCELLED]: 'border-border bg-muted text-muted-foreground',
+      [SubscriptionStatus.SUSPENDED]: 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300',
     };
 
     return (
@@ -72,28 +76,21 @@ export default function AdminOrganizationsPage() {
   );
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading organizations...</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
+  if (loadError && organizations.length === 0) return <DataState title="Organizations unavailable" description={loadError} onRetry={loadOrganizations} />;
 
   return (
-    <div className="space-y-6 pb-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Organizations</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Manage all organizations and their subscriptions</p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-[100rem] space-y-6 pb-8">
+      <PageHeader title="Organizations" description="Manage tenant organizations, owners, staff, and subscription health." />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="hover:shadow-lg transition-shadow">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="Total organizations" value={total} icon={Building2} tone="primary" />
+        <MetricCard label="Active subscriptions" value={organizations.filter(org => org.subscription?.status === SubscriptionStatus.ACTIVE).length} icon={Crown} tone="success" />
+        <MetricCard label="Trial organizations" value={organizations.filter(org => org.subscription?.status === SubscriptionStatus.TRIAL).length} icon={Calendar} tone="warning" />
+        <MetricCard label="Users on this page" value={organizations.reduce((sum, org) => sum + org.userCount, 0)} icon={Users} tone="accent" />
+        <Card className="hidden">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -105,7 +102,7 @@ export default function AdminOrganizationsPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="hidden">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -119,7 +116,7 @@ export default function AdminOrganizationsPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="hidden">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -133,7 +130,7 @@ export default function AdminOrganizationsPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className="hidden">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>

@@ -43,7 +43,8 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
-import { Plus, Edit, Eye, RefreshCw, Settings, Trash2 } from 'lucide-react';
+import { Plus, Edit, Eye, RefreshCw, Settings, Trash2, X } from 'lucide-react';
+import { DataState, PageHeader, PageSkeleton } from '@/components/ui/page-primitives';
 
 interface SubscriptionPlanData {
   id: string;
@@ -94,6 +95,7 @@ export default function SubscriptionManagementPage() {
   const [deleteSubscriptionDialogOpen, setDeleteSubscriptionDialogOpen] = useState(false);
   const [viewSubscriptionDialogOpen, setViewSubscriptionDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'plans' | 'subscriptions'>('plans');
+  const [loadError, setLoadError] = useState('');
 
   // Pagination for subscriptions
   const [page, setPage] = useState(1);
@@ -123,6 +125,7 @@ export default function SubscriptionManagementPage() {
   const loadData = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       if (activeTab === 'plans') {
         const plans = await adminService.getAllSubscriptionPlans();
         setSubscriptionPlans(plans);
@@ -132,6 +135,7 @@ export default function SubscriptionManagementPage() {
         setTotalPages(subscriptionsData.totalPages);
       }
     } catch (error: any) {
+      setLoadError(error?.response?.data?.message || 'Subscription data could not be loaded.');
       toast.error('Failed to load data');
       console.error('Load data error:', error);
     } finally {
@@ -331,21 +335,13 @@ export default function SubscriptionManagementPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
+  if (loadError && subscriptionPlans.length === 0 && subscriptions.length === 0) return <DataState title="Subscriptions unavailable" description={loadError} onRetry={loadData} />;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Subscription Management</h1>
-          <p className="text-gray-600">Create and manage subscription plans that users can purchase</p>
-        </div>
-        <div className="flex gap-2">
+    <div className="mx-auto max-w-[100rem] space-y-6">
+      <PageHeader title="Subscriptions" description="Create plans and manage organization subscription lifecycles." actions={<>
           <Button onClick={loadData} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
@@ -482,10 +478,11 @@ export default function SubscriptionManagementPage() {
                             <Button
                               type="button"
                               variant="ghost"
-                              size="sm"
+                              size="icon"
+                              aria-label={`Remove ${feature}`}
                               onClick={() => removeFeature(index)}
                             >
-                              ×
+                              <X className="size-4" />
                             </Button>
                           </div>
                         ))}
@@ -541,8 +538,7 @@ export default function SubscriptionManagementPage() {
               </Dialog>
             </>
           )}
-        </div>
-      </div>
+      </>} />
 
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
@@ -1168,7 +1164,8 @@ export default function SubscriptionManagementPage() {
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon"
+                        aria-label={`Remove ${feature}`}
                         onClick={() => {
                           setSelectedPlan({
                             ...selectedPlan,
@@ -1176,7 +1173,7 @@ export default function SubscriptionManagementPage() {
                           });
                         }}
                       >
-                        ×
+                        <X className="size-4" />
                       </Button>
                     </div>
                   ))}

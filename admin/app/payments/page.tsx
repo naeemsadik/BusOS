@@ -1,103 +1,45 @@
-'use client';
+"use client"
 
-import { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { PaymentsService } from '@/lib/payments-service';
+import { useEffect, useState } from "react"
+import { CreditCard, RefreshCw, RotateCcw } from "lucide-react"
+import { toast } from "sonner"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataState, PageHeader, PageSkeleton } from "@/components/ui/page-primitives"
+import { PaymentsService } from "@/lib/payments-service"
 
 export default function PaymentsPage() {
-  const [loading, setLoading] = useState(true);
-  const [payments, setPayments] = useState<any[]>([]);
-
-  useEffect(() => {
-    loadPayments();
-  }, []);
+  const [loading, setLoading] = useState(true)
+  const [payments, setPayments] = useState<any[]>([])
+  const [error, setError] = useState("")
+  const [refunding, setRefunding] = useState<string | null>(null)
 
   const loadPayments = async () => {
-    try {
-      const data = await PaymentsService.getPayments();
-      setPayments(data);
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to load payments data';
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setLoading(true); setError("")
+    try { setPayments(await PaymentsService.getPayments()) }
+    catch (loadError: any) { setError(loadError?.response?.data?.message || "Payment data could not be loaded.") }
+    finally { setLoading(false) }
+  }
+  useEffect(() => { void loadPayments() }, [])
 
-  const handlePaymentRefund = async (paymentId: string) => {
-    try {
-      await PaymentsService.refundPayment(paymentId);
-      toast.success('Payment refunded successfully!');
-      await loadPayments();
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to refund payment';
-      toast.error(message);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+  const refund = async (paymentId: string) => {
+    setRefunding(paymentId)
+    try { await PaymentsService.refundPayment(paymentId); toast.success("Payment refunded"); await loadPayments() }
+    catch (refundError: any) { toast.error(refundError?.response?.data?.message || "Payment could not be refunded") }
+    finally { setRefunding(null) }
   }
 
-  return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Payment Management</h1>
-          <p className="text-gray-600">Manage and review payment transactions</p>
-        </div>
+  if (loading) return <PageSkeleton />
+  if (error && payments.length === 0) return <DataState title="Payments unavailable" description={error} onRetry={loadPayments} />
 
-        {payments.map((payment) => (
-          <Card key={payment.id} className="mb-4">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Payment ID: {payment.id}
-                <span className="text-sm font-medium text-gray-500">{payment.status}</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-4 gap-4 mb-2">
-                <div className="font-medium">Amount:</div>
-                <div className="col-span-3">৳{payment.amount}</div>
-              </div>
-              <div className="grid grid-cols-4 gap-4 mb-2">
-                <div className="font-medium">Payer:</div>
-                <div className="col-span-3">{payment.payerReference}</div>
-              </div>
-              <div className="grid grid-cols-4 gap-4 mb-2">
-                <div className="font-medium">Transaction ID:</div>
-                <div className="col-span-3">{payment.trxId || 'N/A'}</div>
-              </div>
-              <div className="grid grid-cols-4 gap-4 mb-2">
-                <div className="font-medium">Time:</div>
-                <div className="col-span-3">{new Date(payment.createdAt).toLocaleString()}</div>
-              </div>
-              <div className="mt-4">
-                <Button className="bg-red-500 hover:bg-red-600" onClick={() => handlePaymentRefund(payment.id)}>
-                  Refund
-                </Button>
-              </div>
-
-              {payment.status === 'REFUNDED' && (
-                <Alert className="mt-4">
-                  <AlertDescription className="text-sm">
-                    This payment has already been refunded.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
+  return <div className="mx-auto max-w-[100rem] space-y-6">
+    <PageHeader title="Payments" description="Review platform transactions and process eligible refunds." actions={<Button variant="outline" onClick={loadPayments}><RefreshCw className="mr-2 size-4" />Refresh</Button>} />
+    {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+    <Card className="overflow-hidden shadow-sm"><CardContent className="p-0">
+      <div className="hidden md:block"><Table><TableHeader><TableRow><TableHead>Transaction</TableHead><TableHead>Payer</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead><TableHead>Created</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader><TableBody>{payments.map(payment => <TableRow key={payment.id}><TableCell><p className="font-medium">{payment.trxId || payment.id}</p><p className="text-xs text-muted-foreground">{payment.id}</p></TableCell><TableCell>{payment.payerReference || "Not provided"}</TableCell><TableCell className="font-semibold tabular-nums">৳{Number(payment.amount || 0).toLocaleString()}</TableCell><TableCell><span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${payment.status === "REFUNDED" ? "bg-muted text-muted-foreground" : "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"}`}>{payment.status}</span></TableCell><TableCell>{new Date(payment.createdAt).toLocaleString()}</TableCell><TableCell className="text-right"><Button size="sm" variant="outline" disabled={payment.status === "REFUNDED" || refunding === payment.id} onClick={() => refund(payment.id)}><RotateCcw className="mr-2 size-4" />Refund</Button></TableCell></TableRow>)}{payments.length === 0 && <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground">No payment transactions found.</TableCell></TableRow>}</TableBody></Table></div>
+      <div className="divide-y md:hidden">{payments.map(payment => <article key={payment.id} className="space-y-3 p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold">{payment.trxId || payment.id}</p><p className="text-xs text-muted-foreground">{payment.payerReference}</p></div><CreditCard className="size-5 text-primary" /></div><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Amount</span><span className="font-bold">৳{Number(payment.amount || 0).toLocaleString()}</span></div><div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Status</span><span className="text-sm font-medium">{payment.status}</span></div><Button className="w-full" size="sm" variant="outline" disabled={payment.status === "REFUNDED" || refunding === payment.id} onClick={() => refund(payment.id)}><RotateCcw className="mr-2 size-4" />Refund</Button></article>)}</div>
+    </CardContent></Card>
+  </div>
 }
-

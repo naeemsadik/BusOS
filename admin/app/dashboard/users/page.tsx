@@ -53,6 +53,7 @@ import {
 import { adminService } from '../../../lib/admin-service';
 import { AdminUserItem, UserRole, UserStatus } from '../../../lib/types';
 import { toast } from 'sonner';
+import { DataState, PageHeader, PageSkeleton } from '@/components/ui/page-primitives';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUserItem[]>([]);
@@ -67,6 +68,7 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState<AdminUserItem | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const pageSize = 10;
 
@@ -78,6 +80,7 @@ export default function AdminUsersPage() {
     try {
       if (!silent) setLoading(true);
       else setRefreshing(true);
+      setLoadError('');
       
       const response = await adminService.getUsers(currentPage, pageSize);
       setUsers(response.users);
@@ -89,6 +92,7 @@ export default function AdminUsersPage() {
       }
     } catch (error: any) {
       console.error('Failed to load users:', error);
+      setLoadError(error?.response?.data?.message || 'Users could not be loaded.');
       toast.error('Failed to load users');
     } finally {
       setLoading(false);
@@ -204,25 +208,14 @@ export default function AdminUsersPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading users...</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
+  if (loadError && users.length === 0) return <DataState title="Users unavailable" description={loadError} onRetry={() => loadUsers()} />;
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="mx-auto max-w-[100rem] space-y-6 pb-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Users</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Manage all users across organizations</p>
-        </div>
-        <div className="flex gap-2">
+      <PageHeader title="Users" description="Review owners and staff across tenant organizations." actions={<>
           <Button
             variant="outline"
             size="sm"
@@ -242,8 +235,7 @@ export default function AdminUsersPage() {
             <Download className="h-4 w-4" />
             <span className="hidden sm:inline">Export</span>
           </Button>
-        </div>
-      </div>
+      </>} />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -458,21 +450,6 @@ export default function AdminUsersPage() {
                           >
                             <Mail className="mr-2 h-4 w-4" />
                             Copy Email
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <UserCog className="mr-2 h-4 w-4" />
-                            Edit User
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setShowDeleteDialog(true);
-                            }}
-                          >
-                            <UserX className="mr-2 h-4 w-4" />
-                            Delete User
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
