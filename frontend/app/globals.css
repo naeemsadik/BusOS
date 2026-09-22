@@ -10,6 +10,8 @@
 
 @layer base {
   :root {
+    --font-manrope: "Manrope Variable";
+    --font-bangla: "Noto Sans Bengali Variable";
     --background: 40 38% 97%;
     --foreground: 222 29% 12%;
     --card: 0 0% 100%;

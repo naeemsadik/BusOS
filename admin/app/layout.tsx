@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { Manrope, Noto_Sans_Bengali } from "next/font/google";
+import "@fontsource-variable/manrope";
+import "@fontsource-variable/noto-sans-bengali";
 import "./globals.css";
 import { AdminProvider } from "../contexts/admin-context";
 import { ThemeProvider } from "../contexts/theme-context";
@@ -8,9 +9,6 @@ import { AdminCurrencyProvider } from "../contexts/currency-context";
 import { LocaleProvider } from "../components/locale-provider";
 import enMessages from "../messages/en.json";
 import bnMessages from "../messages/bn.json";
-
-const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin"] });
-const bangla = Noto_Sans_Bengali({ variable: "--font-bangla", subsets: ["bengali"] });
 
 export const metadata: Metadata = {
   title: "Admin Portal - Inventory POS",
@@ -27,7 +25,7 @@ export default async function RootLayout({
   const messages = locale === "bn" ? bnMessages : enMessages;
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={`${manrope.variable} ${bangla.variable} antialiased`}>
+      <body className="antialiased">
         <LocaleProvider locale={locale} messages={messages}>
           <ThemeProvider>
             <AdminProvider>

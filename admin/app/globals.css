@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 :root {
+  --font-manrope: "Manrope Variable";
+  --font-bangla: "Noto Sans Bengali Variable";
   --background: #fbf8f2;
   --foreground: #151923;
   --card: #ffffff;

@@ -1,7 +1,8 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { cookies } from "next/headers"
-import { Manrope, Noto_Sans_Bengali } from "next/font/google"
+import "@fontsource-variable/manrope"
+import "@fontsource-variable/noto-sans-bengali"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
@@ -13,9 +14,6 @@ import ClarityInit from "@/components/clarity"
 import { LocaleProvider } from "@/components/locale-provider"
 import enMessages from "@/messages/en.json"
 import bnMessages from "@/messages/bn.json"
-
-const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" })
-const bangla = Noto_Sans_Bengali({ subsets: ["bengali"], variable: "--font-bangla" })
 
 export const metadata: Metadata = {
   title: brandConfig.name,
@@ -33,7 +31,7 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={`${manrope.variable} ${bangla.variable}`} suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <LocaleProvider locale={locale} messages={messages}>
           <QueryProvider>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
