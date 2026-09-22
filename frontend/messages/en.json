@@ -76,5 +76,32 @@
     "subscriptionWarning": "Your trial ends in {count, plural, one {# day} other {# days}}.",
     "subscriptionExpired": "Your subscription has expired.",
     "manageSubscription": "Manage subscription"
+  },
+  "orders": {
+    "eyebrow": "Sales operations",
+    "title": "Orders",
+    "description": "Track every order from capture through fulfillment.",
+    "reload": "Reload",
+    "sync": "Sync courier status",
+    "total": "Total orders",
+    "pending": "Pending",
+    "processing": "Processing",
+    "delivered": "Delivered",
+    "search": "Search order, customer, or phone",
+    "filters": "Filters",
+    "allSources": "All sources",
+    "storefront": "Storefront",
+    "pos": "POS",
+    "manual": "Manual",
+    "source": "Source",
+    "status": "Status",
+    "payment": "Payment",
+    "customer": "Customer",
+    "items": "Items",
+    "totalAmount": "Total",
+    "date": "Date",
+    "actions": "Actions",
+    "empty": "No orders match these filters",
+    "loading": "Loading orders"
   }
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -210,16 +210,16 @@ export default function OrderDetailsDialog({
 
   if (!order) return null
  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-[95vw] max-h-[95vh] mx-2 sm:mx-4 bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden flex flex-col">
-        <DialogHeader className="p-4 sm:p-6 pb-3 sm:pb-4 border-b dark:border-gray-700 flex-shrink-0">
-          <DialogTitle className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="flex h-full w-full flex-col overflow-hidden border-l bg-card p-0 sm:max-w-3xl lg:max-w-5xl">
+        <SheetHeader className="flex-shrink-0 border-b p-4 text-left sm:p-6">
+          <SheetTitle className="text-xl font-bold sm:text-2xl">
             Order Details - {order.orderNumber}
-          </DialogTitle>
-          <DialogDescription className="text-gray-500 dark:text-gray-400 text-sm">
+          </SheetTitle>
+          <SheetDescription className="text-sm">
             Complete order information and tracking details
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <div className="flex flex-col lg:flex-row min-h-0 flex-1 overflow-hidden">
           {/* Left Sidebar - Collapsible sections */}
@@ -766,7 +766,7 @@ export default function OrderDetailsDialog({
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }

@@ -94,6 +94,7 @@ export interface Order {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  source?: 'pos' | 'manual' | 'storefront';
 }
 
 export interface OrderQuery {
