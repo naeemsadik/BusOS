@@ -22,6 +22,25 @@ export { SmsPackage, SmsPackageStatus } from './sms-package.entity';
 export { SmsLog, SmsType, SmsStatus } from './sms-log.entity';
 export { SmsSettings } from './sms-settings.entity';
 export { UserPermission, PermissionModuleType } from './user-permission.entity';
+export {
+  Attendance,
+  AttendanceSource,
+  AttendanceStatus,
+  Department,
+  Designation,
+  Employee,
+  EmployeeCompensation,
+  EmploymentStatus,
+  Holiday,
+  HrmAuditLog,
+  HrmSettings,
+  PayType,
+  PayrollAdjustment,
+  PayrollAdjustmentType,
+  PayrollItem,
+  PayrollRun,
+  PayrollStatus,
+} from './hrm.entity';
 export { StorefrontSite, StorefrontPublicationStatus } from './storefront-site.entity';
 export { StorefrontAsset } from './storefront-asset.entity';
 export {
