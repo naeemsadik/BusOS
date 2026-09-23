@@ -56,12 +56,11 @@ export async function middleware(request: NextRequest) {
   const rootDomain = (process.env.STOREFRONT_ROOT_DOMAIN || (process.env.NODE_ENV === 'production' ? '' : 'localhost')).toLowerCase();
   if (rootDomain && host.endsWith(`.${rootDomain}`)) {
     const slug = host.slice(0, -(rootDomain.length + 1));
-    if (/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$/.test(slug) && !['www', 'admin', 'api', 'app'].includes(slug) && !path.startsWith('/backend-api') && !path.startsWith('/_next') && !path.startsWith('/api/')) {
-      const url = request.nextUrl.clone();
-      url.pathname = `/store/${slug}${path === '/' ? '' : path}`;
-      return NextResponse.rewrite(url);
-    }
-    return new NextResponse('Storefront not found', { status: 404 })
+    if (!/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$/.test(slug) || ['www', 'admin', 'api', 'app'].includes(slug)) return new NextResponse('Storefront not found', { status: 404 })
+    if (path.startsWith('/backend-api') || path.startsWith('/_next') || path.startsWith('/api/')) return NextResponse.next()
+    const url = request.nextUrl.clone();
+    url.pathname = `/store/${slug}${path === '/' ? '' : path}`;
+    return NextResponse.rewrite(url);
   }
   
   // Special handling for root path

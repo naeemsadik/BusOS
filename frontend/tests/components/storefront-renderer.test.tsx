@@ -21,6 +21,16 @@ const storefrontDocument: StorefrontDocument = {
 }
 
 describe('StorefrontRenderer', () => {
+  it('renders an announcement body instead of masking it with the default title', () => {
+    const announcementDocument: StorefrontDocument = {
+      ...storefrontDocument,
+      sections: [{ id: 'notice', type: 'announcement', visible: true, content: { title: { en: 'Announcement' }, body: { en: 'Free delivery today' } } }],
+    }
+    render(<StorefrontRenderer site={site} document={announcementDocument} products={[]} locale="en" />)
+    expect(screen.getByText('Free delivery today')).toBeVisible()
+    expect(screen.queryByText('Announcement')).not.toBeInTheDocument()
+  })
+
   it('uses English fallback content without interpreting structured text as HTML', () => {
     const { container } = render(<StorefrontRenderer site={site} document={storefrontDocument} products={[]} locale="bn" />)
     expect(screen.getByRole('heading', { name: 'English fallback' })).toBeVisible()
