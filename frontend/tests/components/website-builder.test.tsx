@@ -43,6 +43,7 @@ const site: StorefrontSite = {
 
 describe('WebsiteBuilder image sections', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     mocks.getCms.mockResolvedValue(site)
     mocks.assets.mockResolvedValue([])
     mocks.getProducts.mockResolvedValue({ data: [] })
@@ -59,5 +60,22 @@ describe('WebsiteBuilder image sections', () => {
     const selectedImages = await screen.findAllByRole('img', { name: 'store story' })
     expect(selectedImages).toHaveLength(2)
     selectedImages.forEach(image => expect(image).toHaveAttribute('src', '/uploads/story.webp'))
+  })
+
+  it('deletes an individual component from the draft', async () => {
+    render(<WebsiteBuilder />)
+    await screen.findByRole('button', { name: 'Image & text' })
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Image & text section' }))
+    expect(screen.queryByRole('button', { name: 'Image & text' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save draft' })).toBeEnabled()
+  })
+
+  it('clears the entire page after confirmation', async () => {
+    render(<WebsiteBuilder />)
+    await screen.findByRole('button', { name: 'Image & text' })
+    fireEvent.click(screen.getByRole('button', { name: 'Delete page content' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete all sections' }))
+    expect(screen.queryByRole('button', { name: 'Image & text' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save draft' })).toBeEnabled()
   })
 })
