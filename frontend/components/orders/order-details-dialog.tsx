@@ -30,6 +30,7 @@ interface OrderDetailsDialogProps {
   onTrackDelivery: (order: Order) => void
   onEditOrder: (order: Order) => void
   onMarkAsPaid: (order: Order) => void
+  onUpdateStatus: (order: Order, status: string) => Promise<void>
   sendingSMS: boolean
 }
 
@@ -48,6 +49,7 @@ export default function OrderDetailsDialog({
   onTrackDelivery,
   onEditOrder,
   onMarkAsPaid,
+  onUpdateStatus,
   sendingSMS
 }: OrderDetailsDialogProps) {
   const { toast } = useToast()
@@ -59,6 +61,7 @@ export default function OrderDetailsDialog({
   // Pathao tracking state
   const [pathaoTracking, setPathaoTracking] = useState<any>(null)
   const [loadingPathao, setLoadingPathao] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
   
   // Helper function for currency formatting
   const formatCurrency = (amount: number): string => {
@@ -219,6 +222,10 @@ export default function OrderDetailsDialog({
           <SheetDescription className="text-sm">
             Complete order information and tracking details
           </SheetDescription>
+          <div className="flex flex-wrap gap-2 pt-2" aria-label="Order source metadata">
+            <Badge variant={order.source === 'storefront' ? 'default' : 'outline'}>{order.source === 'storefront' ? 'Storefront' : order.source === 'pos' ? 'POS' : 'Manual'}</Badge>
+            {order.storefrontLocale && <Badge variant="outline">Locale: {order.storefrontLocale.toUpperCase()}</Badge>}
+          </div>
         </SheetHeader>
 
         <div className="flex flex-col lg:flex-row min-h-0 flex-1 overflow-hidden">
@@ -708,6 +715,26 @@ export default function OrderDetailsDialog({
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 pt-4 border-t dark:border-gray-700">
+              {({ pending: ['confirmed', 'cancelled'], confirmed: ['processing', 'cancelled'], processing: ['shipped', 'cancelled'], shipped: ['delivered', 'returned'], delivered: ['returned'], cancelled: [], returned: [] } as Record<string, string[]>)[order.status]?.length > 0 && (
+                <label className="min-w-[190px] flex-1 text-sm font-medium">
+                  Update order status
+                  <select
+                    aria-label={`Update status for order ${order.orderNumber}`}
+                    className="mt-1 h-10 w-full rounded-md border bg-background px-3"
+                    value=""
+                    disabled={updatingStatus}
+                    onChange={async event => {
+                      const status = event.target.value
+                      if (!status) return
+                      setUpdatingStatus(true)
+                      try { await onUpdateStatus(order, status) } finally { setUpdatingStatus(false) }
+                    }}
+                  >
+                    <option value="">Choose next status</option>
+                    {({ pending: ['confirmed', 'cancelled'], confirmed: ['processing', 'cancelled'], processing: ['shipped', 'cancelled'], shipped: ['delivered', 'returned'], delivered: ['returned'], cancelled: [], returned: [] } as Record<string, string[]>)[order.status].map(status => <option key={status} value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option>)}
+                  </select>
+                </label>
+              )}
               <Button onClick={() => onPrintInvoice(order)} variant="outline" className="flex-1 min-w-[150px] order-1">
                 <Printer className="w-4 h-4 mr-2" />
                 Print Invoice

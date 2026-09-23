@@ -49,6 +49,8 @@ export interface UpdateOrderData {
 export interface Order {
   id: string;
   orderNumber: string;
+  source: 'pos' | 'manual' | 'storefront';
+  storefrontLocale?: string;
   customerId?: string;
   customerName?: string;
   customerEmail?: string;
@@ -94,13 +96,13 @@ export interface Order {
   notes?: string;
   createdAt: string;
   updatedAt: string;
-  source?: 'pos' | 'manual' | 'storefront';
 }
 
 export interface OrderQuery {
   search?: string;
   status?: string;
   paymentStatus?: string;
+  source?: string;
   customerId?: string;
   startDate?: string;
   endDate?: string;

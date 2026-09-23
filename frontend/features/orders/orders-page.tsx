@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -75,6 +75,8 @@ function OrdersPageContent() {
   const [orders, setOrders] = useState<Order[]>([])
   const [activeTab, setActiveTab] = useState("all")
   const [sourceFilter, setSourceFilter] = useState("all")
+  const [newStorefrontOrders, setNewStorefrontOrders] = useState(0)
+  const knownStorefrontOrderIds = useRef<Set<string> | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showViewDialog, setShowViewDialog] = useState(false)
@@ -163,6 +165,7 @@ function OrdersPageContent() {
     if (searchTerm.trim()) query.search = searchTerm.trim()
     if (activeTab !== "all") query.status = activeTab
     if (paymentStatusFilter !== "all") query.paymentStatus = paymentStatusFilter
+    if (sourceFilter !== "all") query.source = sourceFilter
     if (dateFrom) query.startDate = dateFrom
     if (dateTo) query.endDate = dateTo
     if (amountFrom) query.minAmount = parseFloat(amountFrom)
@@ -236,14 +239,36 @@ function OrdersPageContent() {
     }
 
     loadOrders()
-  }, [currentPage, pageSize, searchTerm, activeTab, paymentStatusFilter, dateFrom, dateTo, amountFrom, amountTo, customerFilter, toast])
+  }, [currentPage, pageSize, searchTerm, activeTab, sourceFilter, paymentStatusFilter, dateFrom, dateTo, amountFrom, amountTo, customerFilter, toast])
 
   // Reset to first page when filters change
   useEffect(() => {
     if (currentPage !== 1) {
       setCurrentPage(1)
     }
-  }, [searchTerm, activeTab, paymentStatusFilter, dateFrom, dateTo, amountFrom, amountTo, customerFilter])
+  }, [searchTerm, activeTab, sourceFilter, paymentStatusFilter, dateFrom, dateTo, amountFrom, amountTo, customerFilter])
+
+  useEffect(() => {
+    let cancelled = false
+    const poll = async () => {
+      if (document.visibilityState === "hidden") return
+      try {
+        const response = await ordersService.getOrders({ source: "storefront", page: 1, limit: 10 })
+        if (cancelled) return
+        const latestIds = new Set(response.orders.map(order => order.id))
+        if (knownStorefrontOrderIds.current) {
+          const additions = response.orders.filter(order => !knownStorefrontOrderIds.current!.has(order.id)).length
+          if (additions) setNewStorefrontOrders(count => count + additions)
+        }
+        knownStorefrontOrderIds.current = latestIds
+      } catch {
+        // The normal page error handling remains authoritative; polling is best-effort.
+      }
+    }
+    void poll()
+    const interval = window.setInterval(poll, 15_000)
+    return () => { cancelled = true; window.clearInterval(interval) }
+  }, [])
 
   // Helper functions for pagination
   const handlePageChange = (page: number) => {
@@ -878,6 +903,18 @@ ${brandConfig.name}`
     }
   }
 
+  const handleUpdateOrderStatus = async (order: Order, status: string) => {
+    try {
+      const updated = await ordersService.updateOrder(order.id, { status: status as any })
+      setSelectedOrder(updated)
+      await refreshOrders()
+      toast({ title: "Success", description: `Order moved to ${status}.` })
+    } catch (error: any) {
+      toast({ title: "Status not changed", description: error.response?.data?.message || "The requested transition is not allowed.", variant: "destructive" })
+      throw error
+    }
+  }
+
   const handleViewDetails = (order: Order) => {
     setSelectedOrder(order)
     setShowViewDialog(true)
@@ -1075,6 +1112,13 @@ ${brandConfig.name}`
           </Select>
         </div>
       </PageToolbar>
+
+      {newStorefrontOrders > 0 && (
+        <div role="status" aria-live="polite" className="flex items-center justify-between rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-950">
+          <span>{newStorefrontOrders} new storefront {newStorefrontOrders === 1 ? "order" : "orders"}</span>
+          <Button type="button" size="sm" onClick={() => { setSourceFilter("storefront"); setCurrentPage(1); setNewStorefrontOrders(0) }}>View orders</Button>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span>{((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalOrders)} / {totalOrders}</span>
@@ -1548,6 +1592,7 @@ ${brandConfig.name}`
         onTrackDelivery={handleTrackDelivery}
         onEditOrder={handleEditOrder}
         onMarkAsPaid={handleMarkAsPaid}
+        onUpdateStatus={handleUpdateOrderStatus}
         sendingSMS={sendingSMS}
       />
 
