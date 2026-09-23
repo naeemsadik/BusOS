@@ -68,6 +68,7 @@ function POSPageContent() {
   const [products, setProducts] = useState<Product[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
+  const [dataError, setDataError] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [voiceDialogOpen, setVoiceDialogOpen] = useState(false)
   const [voiceInvoiceReady, setVoiceInvoiceReady] = useState(false)
@@ -78,16 +79,29 @@ function POSPageContent() {
     const loadData = async () => {
       try {
         setLoading(true)
-        const [productsResponse, customersResponse] = await Promise.all([
+        setDataError(false)
+        const [productsResponse, customersResponse] = await Promise.allSettled([
           inventoryService.getProducts(),
           customersService.getCustomers()
-        ])
-        setProducts(productsResponse.data)
-        setCustomers(customersResponse.customers)
+        ] as const)
+
+        if (productsResponse.status === "fulfilled" && Array.isArray(productsResponse.value.data)) {
+          setProducts(productsResponse.value.data)
+        } else {
+          setProducts([])
+          setDataError(true)
+        }
+        setCustomers(
+          customersResponse.status === "fulfilled" && Array.isArray(customersResponse.value.customers)
+            ? customersResponse.value.customers
+            : [],
+        )
+
+        if (productsResponse.status === "rejected") throw productsResponse.reason
       } catch {
         toast({
           title: "Error",
-          description: "Failed to load products and customers. Please refresh the page.",
+          description: "Failed to load products. Please refresh the page.",
           variant: "destructive"
         })
       } finally {
@@ -855,6 +869,13 @@ function POSPageContent() {
 
           {/* Products Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {filteredProducts.length === 0 && (
+              <Card className="col-span-full">
+                <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                  {dataError ? t("loadError") : searchTerm ? t("noMatch") : t("emptyProducts")}
+                </CardContent>
+              </Card>
+            )}
             {filteredProducts.map((product) => (
               <Card key={product.id} className="cursor-pointer hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
@@ -1141,6 +1162,13 @@ function POSPageContent() {
           </div>
 
           <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredProducts.length === 0 && (
+              <Card className="col-span-full">
+                <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                  {dataError ? t("loadError") : searchTerm ? t("noMatch") : t("emptyProducts")}
+                </CardContent>
+              </Card>
+            )}
             {filteredProducts.map((product) => (
               <Card key={product.id} className="cursor-pointer hover:shadow-md transition-shadow">
                 <CardContent className="p-4">

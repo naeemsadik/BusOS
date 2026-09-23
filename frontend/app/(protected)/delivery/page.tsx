@@ -47,6 +47,7 @@ function DeliveryPageContent() {
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
   const [activeTab, setActiveTab] = useState("all")
   const [loading, setLoading] = useState(true)
+  const [dataError, setDataError] = useState(false)
   const [showNewDeliveryDialog, setShowNewDeliveryDialog] = useState(false)
   const [courierProviders, setCourierProviders] = useState<Array<'steadfast' | 'paperfly' | 'pathao'>>([])
   const [courierAvailable, setCourierAvailable] = useState(false)
@@ -114,16 +115,31 @@ function DeliveryPageContent() {
     const loadData = async () => {
       try {
         setLoading(true)
-        const [deliveriesResponse, ordersResponse, courierResponse] = await Promise.all([
+        setDataError(false)
+        const [deliveriesResponse, ordersResponse, courierResponse] = await Promise.allSettled([
           deliveryService.getDeliveries(),
           ordersService.getOrders({ limit: 100 }),
           deliveryService.getAvailableCourierProviders()
-        ])
+        ] as const)
 
-        setDeliveries(deliveriesResponse.deliveries)
-        setOrders(ordersResponse.orders)
-        setCourierProviders(courierResponse.providers)
-        setCourierAvailable(courierResponse.providers.length > 0)
+        if (deliveriesResponse.status === "fulfilled" && Array.isArray(deliveriesResponse.value.deliveries)) {
+          setDeliveries(deliveriesResponse.value.deliveries)
+        } else {
+          setDeliveries([])
+          setDataError(true)
+        }
+        setOrders(
+          ordersResponse.status === "fulfilled" && Array.isArray(ordersResponse.value.orders)
+            ? ordersResponse.value.orders
+            : [],
+        )
+        const providers = courierResponse.status === "fulfilled" && Array.isArray(courierResponse.value.providers)
+          ? courierResponse.value.providers
+          : []
+        setCourierProviders(providers)
+        setCourierAvailable(providers.length > 0)
+
+        if (deliveriesResponse.status === "rejected") throw deliveriesResponse.reason
       } catch (error) {
         console.error('Failed to load data:', error)
         toast({
@@ -839,6 +855,13 @@ function DeliveryPageContent() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {filteredDeliveries.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-28 text-center text-muted-foreground">
+                        {dataError ? "Deliveries could not be loaded. Refresh the page to try again." : "No deliveries match this view."}
+                      </TableCell>
+                    </TableRow>
+                  )}
                   {filteredDeliveries.map((delivery) => (
                     <TableRow key={delivery.id}>
                       <TableCell className="font-medium">{delivery.orderId}</TableCell>
