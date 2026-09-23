@@ -46,18 +46,17 @@ describe('WebsiteBuilder image sections', () => {
     mocks.getCms.mockResolvedValue(site)
     mocks.assets.mockResolvedValue([])
     mocks.getProducts.mockResolvedValue({ data: [] })
-    mocks.upload.mockResolvedValue({ id: 'asset-1', url: '/uploads/story.webp', mimeType: 'image/webp', size: 100, width: 800, height: 600, sortOrder: 0, altTextEn: 'Store story' })
+    mocks.upload.mockResolvedValue({ id: 'asset-1', url: '/uploads/story.webp', mimeType: 'image/webp', size: 100, width: 800, height: 600, sortOrder: 0, altTextEn: 'store story' })
   })
 
   it('uploads a local image and selects it for an Image & text section', async () => {
     render(<WebsiteBuilder />)
     fireEvent.click(await screen.findByRole('button', { name: 'Image & text' }))
-    fireEvent.change(screen.getByLabelText('Image alternative text'), { target: { value: 'Store story' } })
-    const file = new File(['image'], 'story.webp', { type: 'image/webp' })
+    const file = new File(['image'], 'store-story.webp', { type: 'image/webp' })
     fireEvent.change(screen.getByLabelText('Upload from device'), { target: { files: [file] } })
 
-    await waitFor(() => expect(mocks.upload).toHaveBeenCalledWith(file, 'Store story', undefined))
-    const selectedImages = await screen.findAllByRole('img', { name: 'Store story' })
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalledWith(file, 'store story', undefined))
+    const selectedImages = await screen.findAllByRole('img', { name: 'store story' })
     expect(selectedImages).toHaveLength(2)
     selectedImages.forEach(image => expect(image).toHaveAttribute('src', '/uploads/story.webp'))
   })

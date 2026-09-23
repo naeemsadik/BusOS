@@ -100,16 +100,13 @@ function SectionEditor({ section, locale, setLocale, assets, setAssets, update, 
 
   async function uploadImage(file?: File) {
     if (!file) return
-    const altTextEn = content.imageAlt?.en?.trim()
-    if (!altTextEn) {
-      toast({ title: 'Alternative text required', description: 'Add English alternative text before uploading the image.', variant: 'destructive' })
-      return
-    }
+    const filenameText = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
+    const altTextEn = content.imageAlt?.en?.trim() || filenameText || 'Storefront image'
     setUploading(true)
     try {
       const asset = await storefrontService.upload(file, altTextEn, content.imageAlt?.bn?.trim() || undefined)
       setAssets([...assets, asset])
-      update(item => ({ ...item, content: { ...item.content, imageUrl: asset.url } }))
+      update(item => ({ ...item, content: { ...item.content, imageUrl: asset.url, imageAlt: { ...item.content.imageAlt, en: item.content.imageAlt?.en?.trim() || altTextEn } } }))
       toast({ title: 'Image uploaded and selected' })
     } catch (error: any) {
       toast({ title: 'Upload failed', description: error.response?.data?.message || error.message, variant: 'destructive' })
@@ -126,7 +123,7 @@ function SectionEditor({ section, locale, setLocale, assets, setAssets, update, 
     {['hero', 'promotionalBanner'].includes(section.type) && <><Label>Button label<Input value={content.ctaLabel?.[locale] || ''} onChange={event => field('ctaLabel', event.target.value)} /></Label><Label>Button link<Input value={content.ctaHref || ''} onChange={event => update(item => ({ ...item, content: { ...item.content, ctaHref: event.target.value } }))} /></Label></>}
     {supportsImage && <div className="space-y-3 rounded-md border p-3">
       <Label>Image alternative text<Input value={content.imageAlt?.[locale] || ''} onChange={event => field('imageAlt', event.target.value)} /></Label>
-      <p className="text-xs text-muted-foreground">English alternative text is required before uploading.</p>
+      <p className="text-xs text-muted-foreground">If English alternative text is empty, a readable value is created from the filename.</p>
       <Label>Choose from asset library<Select value={content.imageUrl || 'none'} onValueChange={value => update(item => ({ ...item, content: { ...item.content, imageUrl: value === 'none' ? undefined : value } }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No image</SelectItem>{assets.map(asset => <SelectItem key={asset.id} value={asset.url}>{asset.altTextEn}</SelectItem>)}</SelectContent></Select></Label>
       <Label className={`flex items-center justify-center gap-2 rounded border p-3 ${uploading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`} aria-disabled={uploading}>
         {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}{uploading ? 'Uploading image…' : 'Upload from device'}
