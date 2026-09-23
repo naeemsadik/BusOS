@@ -32,6 +32,7 @@ async function bootstrap() {
     process.env.FRONTEND_3_URL || 'http://localhost:3002',
     process.env.FRONTEND_4_URL || 'http://localhost:3003',
   ].filter(Boolean); // Remove any undefined/null values
+  const storefrontRootDomain = process.env.STOREFRONT_ROOT_DOMAIN?.toLowerCase();
 
   console.log('Allowed CORS origins:', allowedOrigins);
 
@@ -43,7 +44,15 @@ async function bootstrap() {
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      return callback(null, true);
+      if (storefrontRootDomain) {
+        try {
+          const url = new URL(origin);
+          const hostname = url.hostname.toLowerCase();
+          if (['http:', 'https:'].includes(url.protocol) && hostname.endsWith(`.${storefrontRootDomain}`)
+              && hostname.slice(0, -(storefrontRootDomain.length + 1)).length > 0) return callback(null, true);
+        } catch { /* rejected below */ }
+      }
+      return callback(new Error('Origin is not allowed by CORS'), false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -54,7 +63,8 @@ async function bootstrap() {
       'Accept', 
       'Authorization', 
       'X-Frontend-Type',
-      'X-API-Version'
+      'X-API-Version',
+      'Idempotency-Key'
     ],
   });
 

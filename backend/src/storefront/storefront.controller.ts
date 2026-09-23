@@ -1,15 +1,16 @@
-import { BadRequestException, Body, Controller, Delete, Get, Header, Param, Patch, Post, Put, Query, Req, StreamableFile, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Header, Headers, Param, Patch, Post, Put, Query, Req, StreamableFile, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionModuleType } from '../entities';
 import { RequiredPermission } from '../permissions/decorators/permission.decorator';
 import { PermissionsGuard } from '../permissions/guards/permissions.guard';
-import { AssetMetadataDto, CreateStorefrontDto, PublicProductQueryDto, SaveStorefrontDraftDto, SlugAvailabilityDto, UpdateAssetDto } from './storefront.dto';
+import { AssetMetadataDto, CreateStorefrontDto, CreateStorefrontOrderDto, PublicProductQueryDto, SaveStorefrontDraftDto, SlugAvailabilityDto, UpdateAssetDto } from './storefront.dto';
+import { StorefrontRateLimitService } from './storefront-rate-limit.service';
 import { StorefrontService } from './storefront.service';
 
 @Controller('storefront')
 export class StorefrontController {
-  constructor(private readonly service: StorefrontService) {}
+  constructor(private readonly service: StorefrontService, private readonly rateLimit: StorefrontRateLimitService) {}
 
   @UseGuards(JwtAuthGuard, PermissionsGuard) @RequiredPermission(PermissionModuleType.WEBSITE, 'view')
   @Get('cms') get(@Req() req: any) { return this.service.getCmsSite(req.user.organization.id); }
@@ -52,4 +53,13 @@ export class StorefrontController {
   @Get('public/:slug/categories') categories(@Param('slug') slug: string) { return this.service.listCategories(slug); }
   @Get('public/:slug/products') products(@Param('slug') slug: string, @Query() query: PublicProductQueryDto) { return this.service.listProducts(slug, query); }
   @Get('public/:slug/products/:productSlug') product(@Param('slug') slug: string, @Param('productSlug') productSlug: string) { return this.service.product(slug, productSlug); }
+
+  @Post('public/:slug/orders') order(@Param('slug') slug: string, @Body() dto: CreateStorefrontOrderDto, @Headers('idempotency-key') key: string, @Req() req: any) {
+    this.rateLimit.check(`checkout:${slug}:${req.ip || 'unknown'}`, 10);
+    return this.service.createOrder(slug, dto, key || '');
+  }
+  @Get('public/:slug/orders/confirmation/:token') confirmation(@Param('slug') slug: string, @Param('token') token: string, @Req() req: any) {
+    this.rateLimit.check(`confirmation:${slug}:${req.ip || 'unknown'}`, 30);
+    return this.service.confirmation(slug, token);
+  }
 }

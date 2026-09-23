@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsEmail, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, Length, Matches, Max, Min, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsEmail, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, Length, Matches, Max, Min, ValidateNested } from 'class-validator';
 import { StorefrontDocument } from './storefront.types';
 
 export const STOREFRONT_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/;
@@ -45,5 +45,5 @@ export class CreateStorefrontOrderDto {
   @IsOptional() @IsString() @Length(1, 100) shippingCity?: string;
   @IsOptional() @IsString() @Length(0, 500) notes?: string;
   @IsOptional() @IsIn(['en', 'bn']) locale?: 'en' | 'bn';
-  @IsArray() @ValidateNested({ each: true }) @Type(() => StorefrontOrderLineDto) items: StorefrontOrderLineDto[];
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(50) @ValidateNested({ each: true }) @Type(() => StorefrontOrderLineDto) items: StorefrontOrderLineDto[];
 }

@@ -1,8 +1,9 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { Organization, Product, ProductStatus, StorefrontAsset, StorefrontPublicationStatus, StorefrontSite, SubscriptionStatus } from '../entities';
-import { AssetMetadataDto, CreateStorefrontDto, PublicProductQueryDto, SaveStorefrontDraftDto, UpdateAssetDto } from './storefront.dto';
+import { createHash, createHmac, randomUUID } from 'crypto';
+import { Order, OrderItem, OrderSource, OrderStatus, Organization, PaymentMethod, PaymentStatus, Product, ProductStatus, StorefrontAsset, StorefrontPublicationStatus, StorefrontSite, SubscriptionStatus } from '../entities';
+import { AssetMetadataDto, CreateStorefrontDto, CreateStorefrontOrderDto, PublicProductQueryDto, SaveStorefrontDraftDto, UpdateAssetDto } from './storefront.dto';
 import { StorefrontAssetStorage } from './storefront-asset.storage';
 import { validateOrderSettings, validateSeo, validateStorefrontDocument, validateTheme } from './storefront-document.validator';
 import { DEFAULT_SEO, DEFAULT_STOREFRONT_DOCUMENT, DEFAULT_THEME } from './storefront.types';
@@ -119,6 +120,64 @@ export class StorefrontService {
     if (!product) throw new NotFoundException('Product not found');
     return this.publicProduct(product);
   }
+  async createOrder(rawSlug: string, dto: CreateStorefrontOrderDto, idempotencyKey: string) {
+    if (!/^[A-Za-z0-9_-]{8,100}$/.test(idempotencyKey)) throw new BadRequestException('A valid Idempotency-Key header is required');
+    const site = await this.requirePublicSite(rawSlug);
+    if (dto.locale === 'bn' && !site.enabledLocales.includes('bn')) throw new BadRequestException('Bangla is not enabled for this storefront');
+    const ids = dto.items.map(item => item.productId);
+    if (new Set(ids).size !== ids.length) throw new BadRequestException('Duplicate product lines are not allowed');
+    try { return await this.dataSource.transaction(async manager => {
+      const existing = await manager.getRepository(Order).createQueryBuilder('order')
+        .where('order.storefrontSiteId = :siteId AND order.checkoutIdempotencyKey = :key', { siteId: site.id, key: idempotencyKey }).getOne();
+      if (existing) return this.orderReceipt(existing, this.confirmationToken(existing.id, idempotencyKey));
+      const products = await manager.getRepository(Product).createQueryBuilder('product')
+        .where('product.id IN (:...ids)', { ids }).andWhere('product.organizationId = :organizationId', { organizationId: site.organizationId })
+        .andWhere('product.status = :status', { status: ProductStatus.ACTIVE }).andWhere('product.storefrontVisible = true').getMany();
+      if (products.length !== ids.length) throw new BadRequestException('One or more products are unavailable');
+      const byId = new Map(products.map(product => [product.id, product]));
+      let subtotal = 0; let taxAmount = 0;
+      const rows = dto.items.map(line => {
+        const product = byId.get(line.productId)!;
+        if (product.trackStock && !product.allowBackorder && product.stock < line.quantity) throw new BadRequestException(`${product.name} does not have enough stock`);
+        const lineSubtotal = this.money(Number(product.price) * line.quantity);
+        const lineTax = this.money(lineSubtotal * (Number(product.taxRate || 0) / 100));
+        subtotal = this.money(subtotal + lineSubtotal); taxAmount = this.money(taxAmount + lineTax);
+        return { product, quantity: line.quantity, total: lineSubtotal };
+      });
+      const shippingAmount = this.money(Number((site.orderSettings as any).deliveryFee || 0));
+      const order = manager.create(Order, {
+        orderNumber: `WEB-${Date.now().toString(36).toUpperCase()}-${randomUUID().slice(0, 6).toUpperCase()}`,
+        source: OrderSource.STOREFRONT, storefrontSiteId: site.id, storefrontLocale: dto.locale || site.defaultLocale,
+        checkoutIdempotencyKey: idempotencyKey, customerName: dto.customerName.trim(), customerPhone: dto.customerPhone.trim(),
+        customerEmail: dto.customerEmail?.trim() || null, shippingAddress: dto.shippingAddress.trim(), shippingCity: dto.shippingCity?.trim() || null,
+        notes: dto.notes?.trim() || null, subtotal, taxAmount, shippingAmount, discountAmount: 0,
+        total: this.money(subtotal + taxAmount + shippingAmount), paidAmount: 0, status: OrderStatus.PENDING,
+        paymentStatus: PaymentStatus.COD, paymentMethod: PaymentMethod.COD, organizationId: site.organizationId,
+      });
+      const saved = await manager.save(order);
+      const token = this.confirmationToken(saved.id, idempotencyKey);
+      saved.confirmationTokenHash = this.tokenHash(token); saved.confirmationExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      await manager.save(saved);
+      await manager.save(rows.map(row => manager.create(OrderItem, {
+        orderId: saved.id, productId: row.product.id, productName: row.product.name, productSku: row.product.sku || null,
+        unitPrice: row.product.price, unitCost: row.product.cost, quantity: row.quantity, discountAmount: 0, total: row.total,
+      })));
+      return this.orderReceipt(saved, token);
+    }); } catch (error: any) {
+      if (error?.code !== '23505') throw error;
+      const existing = await this.dataSource.getRepository(Order).findOne({ where: { storefrontSiteId: site.id, checkoutIdempotencyKey: idempotencyKey } });
+      if (!existing) throw error;
+      return this.orderReceipt(existing, this.confirmationToken(existing.id, idempotencyKey));
+    }
+  }
+  async confirmation(rawSlug: string, token: string) {
+    if (!/^[A-Za-z0-9_-]{32,100}$/.test(token)) throw new NotFoundException('Order confirmation not found');
+    const site = await this.requirePublicSite(rawSlug); const hash = this.tokenHash(token);
+    const order = await this.dataSource.getRepository(Order).createQueryBuilder('order')
+      .where('order.storefrontSiteId = :siteId AND order.confirmationTokenHash = :hash', { siteId: site.id, hash }).getOne();
+    if (!order || !order.confirmationExpiresAt || order.confirmationExpiresAt < new Date()) throw new NotFoundException('Order confirmation not found');
+    return this.orderReceipt(order);
+  }
   listAssets(organizationId: string) {
     return this.assets.find({ where: { organizationId }, order: { sortOrder: 'ASC', createdAt: 'DESC' } });
   }
@@ -187,6 +246,14 @@ export class StorefrontService {
   }
   private publicProduct(product: Product) {
     return { id: product.id, slug: product.slug || product.id, name: product.name, nameBn: product.nameBn, description: product.description, descriptionBn: product.descriptionBn, longDescription: product.longDescription, longDescriptionBn: product.longDescriptionBn, category: product.category, price: Number(product.price), image: product.image, imageAltText: product.imageAltText, imageAltTextBn: product.imageAltTextBn, available: !product.trackStock || product.allowBackorder || product.stock > 0 };
+  }
+  private money(value: number) { return Math.round((value + Number.EPSILON) * 100) / 100; }
+  private confirmationToken(orderId: string, key: string) {
+    return createHmac('sha256', process.env.CONFIRMATION_TOKEN_SECRET || process.env.JWT_SECRET || 'local-development-secret').update(`${orderId}:${key}`).digest('base64url');
+  }
+  private tokenHash(token: string) { return createHash('sha256').update(token).digest('hex'); }
+  private orderReceipt(order: Order, confirmationToken?: string) {
+    return { id: order.id, orderNumber: order.orderNumber, status: order.status, subtotal: Number(order.subtotal), taxAmount: Number(order.taxAmount), shippingAmount: Number(order.shippingAmount), total: Number(order.total), locale: order.storefrontLocale, confirmationToken };
   }
   private async invalidatePublishedCache(slug: string) {
     const frontend = process.env.FRONTEND_1_URL;
