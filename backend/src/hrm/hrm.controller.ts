@@ -10,8 +10,12 @@ import { HrmService } from './hrm.service';
 import {
   CreateDepartmentDto,
   CreateDesignationDto,
+  CreateEmployeeDto,
+  EmployeeQueryDto,
+  LinkEmployeeAccountDto,
   UpdateDepartmentDto,
   UpdateDesignationDto,
+  UpdateEmployeeDto,
   UpdateHrmSettingsDto,
 } from './dto/hrm.dto';
 
@@ -67,5 +71,37 @@ export class HrmController {
   archiveDesignation(@Request() req, @Param('id', ParseUUIDPipe) id: string) {
     return this.hrm.archiveDesignation(req.user.organizationId, id);
   }
-}
 
+  @Get('employees/account-candidates') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'edit')
+  accountCandidates(@Request() req) { return this.hrm.getAccountCandidates(req.user.organizationId); }
+
+  @Get('employees') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'view')
+  employees(@Request() req, @Query() query: EmployeeQueryDto) {
+    return this.hrm.getEmployees(req.user.organizationId, query);
+  }
+
+  @Post('employees') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'create')
+  createEmployee(@Request() req, @Body() dto: CreateEmployeeDto) {
+    return this.hrm.createEmployee(req.user.organizationId, dto);
+  }
+
+  @Get('employees/:id') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'view')
+  employee(@Request() req, @Param('id', ParseUUIDPipe) id: string) {
+    return this.hrm.getEmployee(req.user.organizationId, id);
+  }
+
+  @Patch('employees/:id') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'edit')
+  updateEmployee(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateEmployeeDto) {
+    return this.hrm.updateEmployee(req.user.organizationId, id, dto);
+  }
+
+  @Post('employees/:id/archive') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'delete')
+  archiveEmployee(@Request() req, @Param('id', ParseUUIDPipe) id: string) {
+    return this.hrm.archiveEmployee(req.user.organizationId, id);
+  }
+
+  @Patch('employees/:id/account-link') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'edit')
+  linkEmployee(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Body() dto: LinkEmployeeAccountDto) {
+    return this.hrm.linkEmployeeAccount(req.user.organizationId, id, dto);
+  }
+}

@@ -48,3 +48,61 @@ export class UpdateDesignationDto extends UpdateDepartmentDto {
   @IsOptional() @IsUUID() departmentId?: string;
 }
 
+export class CreateEmployeeDto {
+  @IsOptional() @IsString() @Length(1, 32) employeeCode?: string;
+  @IsString() @Length(1, 100) firstName: string;
+  @IsString() @Length(1, 100) lastName: string;
+  @IsOptional() @IsEmail() email?: string;
+  @IsOptional() @IsString() @MaxLength(50) phone?: string;
+  @IsOptional() @IsDateString() dateOfBirth?: string;
+  @IsOptional() @IsString() @MaxLength(2000) address?: string;
+  @IsOptional() @IsString() @MaxLength(150) emergencyContactName?: string;
+  @IsOptional() @IsString() @MaxLength(50) emergencyContactPhone?: string;
+  @IsDateString() joiningDate: string;
+  @IsOptional() @IsUUID() departmentId?: string;
+  @IsOptional() @IsUUID() designationId?: string;
+  @IsOptional() @IsUUID() linkedUserId?: string;
+  @IsOptional() @IsArray() @ArrayMinSize(1) @ArrayMaxSize(7) @IsInt({ each: true })
+  @Min(0, { each: true }) @Max(6, { each: true }) workDaysOverride?: number[];
+  @IsOptional() @Matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/) workStartTimeOverride?: string;
+  @IsOptional() @Matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/) workEndTimeOverride?: string;
+  @IsOptional() @IsInt() @Min(0) @Max(240) @Type(() => Number) graceMinutesOverride?: number;
+  @IsOptional() @IsString() @MaxLength(3000) notes?: string;
+}
+
+export class UpdateEmployeeDto {
+  @IsOptional() @IsString() @Length(1, 32) employeeCode?: string;
+  @IsOptional() @IsString() @Length(1, 100) firstName?: string;
+  @IsOptional() @IsString() @Length(1, 100) lastName?: string;
+  @IsOptional() @IsEmail() email?: string;
+  @IsOptional() @IsString() @MaxLength(50) phone?: string;
+  @IsOptional() @IsDateString() dateOfBirth?: string;
+  @IsOptional() @IsString() @MaxLength(2000) address?: string;
+  @IsOptional() @IsString() @MaxLength(150) emergencyContactName?: string;
+  @IsOptional() @IsString() @MaxLength(50) emergencyContactPhone?: string;
+  @IsOptional() @IsDateString() joiningDate?: string;
+  @IsOptional() @IsDateString() terminationDate?: string;
+  @IsOptional() @IsString() @MaxLength(2000) terminationReason?: string;
+  @IsOptional() @IsEnum(EmploymentStatus) status?: EmploymentStatus;
+  @IsOptional() @IsUUID() departmentId?: string;
+  @IsOptional() @IsUUID() designationId?: string;
+  @IsOptional() @IsArray() @ArrayMinSize(1) @ArrayMaxSize(7) @IsInt({ each: true })
+  @Min(0, { each: true }) @Max(6, { each: true }) workDaysOverride?: number[];
+  @IsOptional() @Matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/) workStartTimeOverride?: string;
+  @IsOptional() @Matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/) workEndTimeOverride?: string;
+  @IsOptional() @IsInt() @Min(0) @Max(240) @Type(() => Number) graceMinutesOverride?: number;
+  @IsOptional() @IsString() @MaxLength(3000) notes?: string;
+}
+
+export class EmployeeQueryDto {
+  @IsOptional() @IsString() @MaxLength(100) search?: string;
+  @IsOptional() @IsEnum(EmploymentStatus) status?: EmploymentStatus;
+  @IsOptional() @IsUUID() departmentId?: string;
+  @IsOptional() @IsUUID() designationId?: string;
+  @IsOptional() @IsInt() @Min(1) @Type(() => Number) page = 1;
+  @IsOptional() @IsInt() @Min(1) @Max(100) @Type(() => Number) limit = 20;
+}
+
+export class LinkEmployeeAccountDto {
+  @IsOptional() @IsUUID() userId?: string | null;
+}
