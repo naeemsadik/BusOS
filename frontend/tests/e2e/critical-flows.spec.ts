@@ -54,17 +54,19 @@ test("public storefront supports browsing in both languages", async ({ page }) =
   await page.goto(`/store/${slug}`)
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
   await page.getByRole("link", { name: "বাংলা" }).click()
-  await expect(page).toHaveURL(/locale=bn/)
+  await expect(page).toHaveURL(/\/bn$/)
 })
 
 test("guest can place a delivery-only cash-on-delivery order", async ({ page }) => {
   const slug = process.env.BUSOS_E2E_STOREFRONT_SLUG
   test.skip(!slug || !runMutations, "Set a seeded storefront slug and BUSOS_E2E_MUTATIONS=true.")
   await page.goto(`/store/${slug}`)
-  await page.getByRole("button", { name: /^Add / }).first().click()
+  await page.getByRole("link", { name: /৳/ }).first().click()
+  await page.getByRole("button", { name: "Add to cart" }).click()
+  await page.getByRole("link", { name: /Checkout/ }).click()
   await page.getByLabel("Name").fill("E2E Customer")
   await page.getByLabel("Phone").fill("01700000000")
   await page.getByLabel("Address").fill("Seeded delivery address")
-  await page.getByRole("button", { name: "Place cash-on-delivery order" }).click()
+  await page.getByRole("button", { name: "Place order" }).click()
   await expect(page.getByText("Order received").first()).toBeVisible()
 })

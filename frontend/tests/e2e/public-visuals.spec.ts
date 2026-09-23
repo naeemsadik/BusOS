@@ -35,3 +35,13 @@ test("registration reports validation errors without contacting the backend", as
   await expect(page.getByText("Please enter a valid email address")).toBeVisible()
   await expect(page.getByText("Password must be at least 8 characters")).toBeVisible()
 })
+
+test("published storefront is accessible and does not overflow", async ({ page }) => {
+  const slug = process.env.BUSOS_E2E_STOREFRONT_SLUG
+  test.skip(!slug, "Set BUSOS_E2E_STOREFRONT_SLUG to a published seeded storefront.")
+  await page.goto(`/store/${slug}`)
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()?.width || 0)
+  const accessibility = await new AxeBuilder({ page }).analyze()
+  expect(accessibility.violations).toEqual([])
+})

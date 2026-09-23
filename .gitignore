@@ -2,6 +2,7 @@ node_modules/
 .next/
 out/
 coverage/
+backend/uploads/
 **/playwright-report/
 **/test-results/
 *.tsbuildinfo

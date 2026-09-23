@@ -3,8 +3,7 @@ import { defineConfig, devices } from "@playwright/test"
 const viewports = [
   { name: "mobile-360", width: 360, height: 800 },
   { name: "tablet-768", width: 768, height: 1024 },
-  { name: "desktop-1280", width: 1280, height: 900 },
-  { name: "wide-1536", width: 1536, height: 960 },
+  { name: "desktop-1440", width: 1440, height: 900 },
 ]
 
 const projects = viewports.flatMap(({ name, width, height }) =>
