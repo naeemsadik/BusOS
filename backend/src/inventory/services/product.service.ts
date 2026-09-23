@@ -48,8 +48,10 @@ export class ProductService {
       }
     }
 
+    const slug = await this.uniqueSlug(createProductDto.slug || createProductDto.name, organization.id);
     const product = this.productRepository.create({
       ...createProductDto,
+      slug,
       sku: createProductDto.sku ?? null,
       organization,
     });
@@ -272,10 +274,22 @@ export class ProductService {
       }
     }
 
+    if (updateProductDto.slug && updateProductDto.slug !== product.slug) updateProductDto.slug = await this.uniqueSlug(updateProductDto.slug, organization.id, product.id);
     Object.assign(product, updateProductDto);
     const updatedProduct = await this.productRepository.save(product);
 
     return updatedProduct;
+  }
+
+  private async uniqueSlug(value: string, organizationId: string, excludeId?: string) {
+    const base = value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 220) || 'product';
+    for (let suffix = 0; suffix < 100; suffix += 1) {
+      const slug = suffix ? `${base}-${suffix + 1}` : base;
+      const qb = this.productRepository.createQueryBuilder('product').where('product.organizationId = :organizationId', { organizationId }).andWhere('lower(product.slug) = :slug', { slug });
+      if (excludeId) qb.andWhere('product.id != :excludeId', { excludeId });
+      if (!(await qb.getExists())) return slug;
+    }
+    return `${base}-${Date.now().toString(36)}`;
   }
 
   async remove(id: string, organization: Organization): Promise<void> {

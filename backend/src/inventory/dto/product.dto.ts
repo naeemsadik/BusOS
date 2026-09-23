@@ -8,6 +8,7 @@ import {
   Min,
   Max,
   Length,
+  Matches,
   IsDecimal,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
@@ -18,7 +19,7 @@ export class CreateProductDto {
   @Length(1, 255)
   name: string;
 
-  @IsOptional() @IsString() @Length(1, 255) slug?: string;
+  @IsOptional() @IsString() @Length(1, 255) @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) slug?: string;
   @IsOptional() @IsString() @Length(0, 255) nameBn?: string;
 
   @Transform(({ value }) =>
@@ -143,7 +144,7 @@ export class UpdateProductDto {
   @Length(1, 255)
   name?: string;
 
-  @IsOptional() @IsString() @Length(1, 255) slug?: string;
+  @IsOptional() @IsString() @Length(1, 255) @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) slug?: string;
   @IsOptional() @IsString() @Length(0, 255) nameBn?: string;
 
   @IsOptional()

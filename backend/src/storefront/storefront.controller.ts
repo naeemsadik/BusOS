@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionModuleType } from '../entities';
 import { RequiredPermission } from '../permissions/decorators/permission.decorator';
 import { PermissionsGuard } from '../permissions/guards/permissions.guard';
-import { AssetMetadataDto, CreateStorefrontDto, SaveStorefrontDraftDto, SlugAvailabilityDto, UpdateAssetDto } from './storefront.dto';
+import { AssetMetadataDto, CreateStorefrontDto, PublicProductQueryDto, SaveStorefrontDraftDto, SlugAvailabilityDto, UpdateAssetDto } from './storefront.dto';
 import { StorefrontService } from './storefront.service';
 
 @Controller('storefront')
@@ -47,4 +47,9 @@ export class StorefrontController {
     const { asset, buffer } = await this.service.getPublicAsset(id);
     return new StreamableFile(buffer, { type: asset.mimeType, length: asset.size });
   }
+
+  @Get('public/:slug') resolve(@Param('slug') slug: string) { return this.service.resolvePublished(slug); }
+  @Get('public/:slug/categories') categories(@Param('slug') slug: string) { return this.service.listCategories(slug); }
+  @Get('public/:slug/products') products(@Param('slug') slug: string, @Query() query: PublicProductQueryDto) { return this.service.listProducts(slug, query); }
+  @Get('public/:slug/products/:productSlug') product(@Param('slug') slug: string, @Param('productSlug') productSlug: string) { return this.service.product(slug, productSlug); }
 }

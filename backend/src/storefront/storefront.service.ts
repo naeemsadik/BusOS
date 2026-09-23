@@ -1,8 +1,8 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { Organization, StorefrontAsset, StorefrontPublicationStatus, StorefrontSite } from '../entities';
-import { AssetMetadataDto, CreateStorefrontDto, SaveStorefrontDraftDto, UpdateAssetDto } from './storefront.dto';
+import { Organization, Product, ProductStatus, StorefrontAsset, StorefrontPublicationStatus, StorefrontSite, SubscriptionStatus } from '../entities';
+import { AssetMetadataDto, CreateStorefrontDto, PublicProductQueryDto, SaveStorefrontDraftDto, UpdateAssetDto } from './storefront.dto';
 import { StorefrontAssetStorage } from './storefront-asset.storage';
 import { validateOrderSettings, validateSeo, validateStorefrontDocument, validateTheme } from './storefront-document.validator';
 import { DEFAULT_SEO, DEFAULT_STOREFRONT_DOCUMENT, DEFAULT_THEME } from './storefront.types';
@@ -15,6 +15,7 @@ export class StorefrontService {
   constructor(
     @InjectRepository(StorefrontSite) private readonly sites: Repository<StorefrontSite>,
     @InjectRepository(StorefrontAsset) private readonly assets: Repository<StorefrontAsset>,
+    @InjectRepository(Product) private readonly products: Repository<Product>,
     private readonly assetStorage: StorefrontAssetStorage,
     private readonly dataSource: DataSource,
   ) {}
@@ -79,6 +80,45 @@ export class StorefrontService {
     await this.invalidatePublishedCache(published.slug);
     return published;
   }
+  async resolvePublished(slug: string) {
+    const site = await this.requirePublicSite(slug);
+    return this.publicSite(site);
+  }
+  async listCategories(slug: string) {
+    const site = await this.requirePublicSite(slug);
+    const rows = await this.products.createQueryBuilder('product').select('DISTINCT product.category', 'category')
+      .where('product.organizationId = :organizationId', { organizationId: site.organizationId })
+      .andWhere('product.status = :status', { status: ProductStatus.ACTIVE }).andWhere('product.storefrontVisible = true')
+      .andWhere('product.category IS NOT NULL').orderBy('product.category', 'ASC').getRawMany();
+    return rows.map(row => row.category);
+  }
+  async listProducts(slug: string, query: PublicProductQueryDto) {
+    const site = await this.requirePublicSite(slug);
+    const qb = this.products.createQueryBuilder('product')
+      .where('product.organizationId = :organizationId', { organizationId: site.organizationId })
+      .andWhere('product.status = :status', { status: ProductStatus.ACTIVE }).andWhere('product.storefrontVisible = true');
+    if (query.category) qb.andWhere('product.category = :category', { category: query.category });
+    if (query.search) {
+      const search = `%${query.search.replace(/[\\%_]/g, '\\$&')}%`;
+      qb.andWhere('(product.name ILIKE :search OR product."nameBn" ILIKE :search OR product.description ILIKE :search)', { search });
+    }
+    const sort = {
+      newest: ['product.createdAt', 'DESC'], name: ['product.name', 'ASC'],
+      priceAsc: ['product.price', 'ASC'], priceDesc: ['product.price', 'DESC'],
+    }[query.sort] as [string, 'ASC' | 'DESC'];
+    const [products, total] = await qb.orderBy(sort[0], sort[1]).addOrderBy('product.id', 'ASC')
+      .skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
+    return { data: products.map(product => this.publicProduct(product)), total, page: query.page, limit: query.limit, totalPages: Math.ceil(total / query.limit) };
+  }
+  async product(slug: string, productSlug: string) {
+    const site = await this.requirePublicSite(slug);
+    const product = await this.products.createQueryBuilder('product')
+      .where('product.organizationId = :organizationId', { organizationId: site.organizationId })
+      .andWhere('(lower(product.slug) = lower(:productSlug) OR product.id::text = :productSlug)', { productSlug })
+      .andWhere('product.status = :status', { status: ProductStatus.ACTIVE }).andWhere('product.storefrontVisible = true').getOne();
+    if (!product) throw new NotFoundException('Product not found');
+    return this.publicProduct(product);
+  }
   listAssets(organizationId: string) {
     return this.assets.find({ where: { organizationId }, order: { sortOrder: 'ASC', createdAt: 'DESC' } });
   }
@@ -129,6 +169,24 @@ export class StorefrontService {
     if (!ids.length) return;
     const count = await repository.createQueryBuilder('asset').where('asset.organizationId = :organizationId', { organizationId: site.organizationId }).andWhere('asset.id IN (:...ids)', { ids }).getCount();
     if (count !== ids.length) throw new BadRequestException('The draft references an image owned by another organization or an image that no longer exists');
+  }
+  private async requirePublicSite(rawSlug: string) {
+    const slug = this.normalizeSlug(rawSlug);
+    const site = await this.sites.findOne({ where: { slug }, relations: ['organization', 'organization.subscription'] });
+    if (!site || !site.publishedDocument || site.status === StorefrontPublicationStatus.DRAFT) throw new NotFoundException('Storefront not found');
+    const subscription = site.organization?.subscription; const now = new Date();
+    const active = subscription && ((subscription.status === SubscriptionStatus.ACTIVE && subscription.endDate > now)
+      || (subscription.status === SubscriptionStatus.TRIAL && !!subscription.trialEndDate && subscription.trialEndDate > now));
+    if (site.status === StorefrontPublicationStatus.INACTIVE || !site.organization?.isActive || !active) {
+      throw new ServiceUnavailableException({ message: 'This store is temporarily unavailable', storefront: { name: site.organization?.name, logo: site.organization?.logo, themeTokens: site.themeTokens } });
+    }
+    return site;
+  }
+  private publicSite(site: StorefrontSite) {
+    return { slug: site.slug, name: site.organization.name, logo: site.organization.logo, enabledLocales: site.enabledLocales, defaultLocale: site.defaultLocale, themeTokens: site.themeTokens, seoSettings: site.seoSettings, orderSettings: site.orderSettings, document: site.publishedDocument, publishedVersion: site.publishedVersion, publishedAt: site.publishedAt };
+  }
+  private publicProduct(product: Product) {
+    return { id: product.id, slug: product.slug || product.id, name: product.name, nameBn: product.nameBn, description: product.description, descriptionBn: product.descriptionBn, longDescription: product.longDescription, longDescriptionBn: product.longDescriptionBn, category: product.category, price: Number(product.price), image: product.image, imageAltText: product.imageAltText, imageAltTextBn: product.imageAltTextBn, available: !product.trackStock || product.allowBackorder || product.stock > 0 };
   }
   private async invalidatePublishedCache(slug: string) {
     const frontend = process.env.FRONTEND_1_URL;

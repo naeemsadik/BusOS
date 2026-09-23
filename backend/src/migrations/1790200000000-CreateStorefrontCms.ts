@@ -47,6 +47,7 @@ export class CreateStorefrontCms1790200000000 implements MigrationInterface {
       `ADD COLUMN IF NOT EXISTS "longDescriptionBn" text`, `ADD COLUMN IF NOT EXISTS "storefrontVisible" boolean NOT NULL DEFAULT true`,
       `ADD COLUMN IF NOT EXISTS "imageAltText" varchar(255)`, `ADD COLUMN IF NOT EXISTS "imageAltTextBn" varchar(255)`,
     ]) await q.query(`ALTER TABLE "products" ${sql}`);
+    await q.query(`UPDATE "products" SET "slug" = concat(COALESCE(NULLIF(trim(both '-' from regexp_replace(lower("name"), '[^a-z0-9]+', '-', 'g')), ''), 'product'), '-', left("id"::text, 8)) WHERE "slug" IS NULL`);
     await q.query(`CREATE UNIQUE INDEX IF NOT EXISTS "IDX_products_org_slug" ON "products" ("organizationId", lower("slug")) WHERE "slug" IS NOT NULL`);
 
     for (const sql of [
