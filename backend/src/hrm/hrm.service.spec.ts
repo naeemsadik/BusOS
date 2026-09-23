@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
-import { Attendance } from '../entities';
+import { getMetadataArgsStorage } from 'typeorm';
+import { Attendance, Employee, HrmSettings, PayrollRun } from '../entities';
 import { HrmService } from './hrm.service';
 
 describe('HrmService business rules', () => {
@@ -57,5 +58,54 @@ describe('HrmService business rules', () => {
 
     expect(csv).toContain("'=HYPERLINK");
     expect(csv).not.toContain('\r\n"=HYPERLINK');
+  });
+
+  it('initializes organization settings without a concurrent insert failure', async () => {
+    const settings = { id: 'settings-id', organizationId: 'organization-id' } as HrmSettings;
+    const execute = jest.fn().mockResolvedValue(undefined);
+    const settingsRepo = {
+      findOne: jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(settings),
+      createQueryBuilder: jest.fn(() => ({
+        insert: () => ({
+          values: () => ({
+            orIgnore: () => ({ execute }),
+          }),
+        }),
+      })),
+    };
+    const concurrentService = new HrmService(
+      settingsRepo as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(concurrentService.getSettings('organization-id')).resolves.toBe(settings);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(settingsRepo.findOne).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('HRM entity metadata', () => {
+  it('declares database types for nullable union fields', () => {
+    const expected: Array<[Function, string[]]> = [
+      [Employee, ['email', 'phone', 'emergencyContactName', 'emergencyContactPhone']],
+      [PayrollRun, ['paymentReference']],
+    ];
+
+    for (const [entity, properties] of expected) {
+      const columns = getMetadataArgsStorage().columns.filter((column) => column.target === entity);
+      for (const property of properties) {
+        expect(columns.find((column) => column.propertyName === property)?.options.type).toBe('varchar');
+      }
+    }
   });
 });

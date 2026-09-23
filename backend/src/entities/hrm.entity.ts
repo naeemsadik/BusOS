@@ -120,12 +120,12 @@ export class Employee {
   @Column({ length: 32 }) employeeCode: string;
   @Column({ length: 100 }) firstName: string;
   @Column({ length: 100 }) lastName: string;
-  @Column({ nullable: true }) email: string | null;
-  @Column({ nullable: true }) phone: string | null;
+  @Column({ type: 'varchar', nullable: true }) email: string | null;
+  @Column({ type: 'varchar', nullable: true }) phone: string | null;
   @Column({ type: 'date', nullable: true }) dateOfBirth: string | null;
   @Column({ type: 'text', nullable: true }) address: string | null;
-  @Column({ nullable: true }) emergencyContactName: string | null;
-  @Column({ nullable: true }) emergencyContactPhone: string | null;
+  @Column({ type: 'varchar', nullable: true }) emergencyContactName: string | null;
+  @Column({ type: 'varchar', nullable: true }) emergencyContactPhone: string | null;
   @Column({ type: 'date' }) joiningDate: string;
   @Column({ type: 'date', nullable: true }) terminationDate: string | null;
   @Column({ type: 'text', nullable: true }) terminationReason: string | null;
@@ -228,7 +228,7 @@ export class PayrollRun {
   @Column({ type: 'uuid' }) generatedById: string;
   @Column({ type: 'timestamptz', nullable: true }) finalizedAt: Date | null;
   @Column({ type: 'timestamptz', nullable: true }) paidAt: Date | null;
-  @Column({ nullable: true }) paymentReference: string | null;
+  @Column({ type: 'varchar', nullable: true }) paymentReference: string | null;
   @Column({ type: 'text', nullable: true }) paymentNote: string | null;
   @OneToMany(() => PayrollItem, (item) => item.run) items: PayrollItem[];
   @CreateDateColumn() createdAt: Date;

@@ -51,7 +51,11 @@ export class HrmService {
 
   async getSettings(organizationId: string): Promise<HrmSettings> {
     let settings = await this.settingsRepo.findOne({ where: { organizationId } });
-    if (!settings) settings = await this.settingsRepo.save(this.settingsRepo.create({ organizationId }));
+    if (!settings) {
+      await this.settingsRepo.createQueryBuilder().insert().values({ organizationId }).orIgnore().execute();
+      settings = await this.settingsRepo.findOne({ where: { organizationId } });
+    }
+    if (!settings) throw new NotFoundException('Unable to initialize HRM settings');
     return settings;
   }
 
