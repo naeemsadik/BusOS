@@ -127,4 +127,18 @@ export class HrmController {
   bulkAttendance(@Request() req, @Body() dto: BulkAttendanceDto) {
     return this.hrm.bulkAttendance(req.user.organizationId, req.user.id, dto);
   }
+
+  @Get('attendance/me')
+  myAttendance(@Request() req, @Query() query: AttendanceQueryDto) {
+    return this.hrm.getMyAttendance(req.user.organizationId, req.user.id, query);
+  }
+
+  @Get('employees/me/profile')
+  myEmployee(@Request() req) { return this.hrm.getMyEmployee(req.user.organizationId, req.user.id); }
+
+  @Post('attendance/clock-in')
+  clockIn(@Request() req) { return this.hrm.clockIn(req.user.organizationId, req.user.id); }
+
+  @Post('attendance/clock-out')
+  clockOut(@Request() req) { return this.hrm.clockOut(req.user.organizationId, req.user.id); }
 }

@@ -252,6 +252,64 @@ export class HrmService {
     });
   }
 
+  async getMyEmployee(organizationId: string, userId: string): Promise<Employee> {
+    const employee = await this.employeeRepo.findOne({
+      where: { organizationId, linkedUserId: userId }, relations: ['department', 'designation'],
+    });
+    if (!employee) throw new NotFoundException('No employee profile is linked to this account');
+    return employee;
+  }
+
+  async getMyAttendance(organizationId: string, userId: string, query: AttendanceQueryDto) {
+    const employee = await this.getMyEmployee(organizationId, userId);
+    return this.getAttendance(organizationId, { ...query, employeeId: employee.id });
+  }
+
+  async clockIn(organizationId: string, userId: string): Promise<Attendance> {
+    const employee = await this.getMyEmployee(organizationId, userId);
+    if (employee.status !== EmploymentStatus.ACTIVE) throw new BadRequestException('Employee profile is not active');
+    const settings = await this.getSettings(organizationId);
+    if (!settings.isConfigured) throw new BadRequestException('The owner must configure HRM settings before clock-in');
+    const now = new Date();
+    const workDate = this.localDate(now, settings.timezone);
+    return this.dataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(Attendance);
+      const existing = await repo.createQueryBuilder('attendance')
+        .setLock('pessimistic_write')
+        .where('attendance.organizationId = :organizationId', { organizationId })
+        .andWhere('attendance.employeeId = :employeeId', { employeeId: employee.id })
+        .andWhere('attendance.workDate = :workDate', { workDate }).getOne();
+      if (existing) throw new ConflictException(existing.checkOutAt ? 'Attendance is already complete for today' : 'Already clocked in');
+      const attendance = repo.create({
+        organizationId, employeeId: employee.id, workDate, status: AttendanceStatus.PRESENT,
+        source: AttendanceSource.SELF, checkInAt: now, checkOutAt: null,
+        ...(await this.getScheduleSnapshot(employee, workDate)), createdById: userId, updatedById: userId,
+      });
+      this.calculateAttendanceMinutes(attendance, employee.graceMinutesOverride ?? settings.graceMinutes);
+      return repo.save(attendance);
+    });
+  }
+
+  async clockOut(organizationId: string, userId: string): Promise<Attendance> {
+    const employee = await this.getMyEmployee(organizationId, userId);
+    const settings = await this.getSettings(organizationId);
+    if (!settings.isConfigured) throw new BadRequestException('The owner must configure HRM settings before clock-out');
+    return this.dataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(Attendance);
+      const attendance = await repo.createQueryBuilder('attendance')
+        .setLock('pessimistic_write')
+        .where('attendance.organizationId = :organizationId', { organizationId })
+        .andWhere('attendance.employeeId = :employeeId', { employeeId: employee.id })
+        .andWhere('attendance.checkInAt IS NOT NULL').andWhere('attendance.checkOutAt IS NULL')
+        .orderBy('attendance.checkInAt', 'DESC').getOne();
+      if (!attendance) throw new ConflictException('No open clock-in was found');
+      attendance.checkOutAt = new Date();
+      attendance.updatedById = userId;
+      this.calculateAttendanceMinutes(attendance, employee.graceMinutesOverride ?? settings.graceMinutes);
+      return repo.save(attendance);
+    });
+  }
+
   private async getScheduleSnapshot(employee: Employee, workDate: string) {
     const settings = await this.getSettings(employee.organizationId);
     const start = employee.workStartTimeOverride || settings.workStartTime;
@@ -280,6 +338,14 @@ export class HrmService {
     const parts = Object.fromEntries(formatter.formatToParts(new Date(target)).map((part) => [part.type, part.value]));
     const represented = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
     return new Date(target - (represented - target));
+  }
+
+  private localDate(date: Date, timezone: string): string {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${values.year}-${values.month}-${values.day}`;
   }
 
   private dateRange(start: string, end: string): string[] {
