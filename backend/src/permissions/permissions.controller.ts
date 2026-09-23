@@ -19,8 +19,8 @@ export class PermissionsController {
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Get permissions for a specific user' })
   @ApiResponse({ status: 200, description: 'Permissions retrieved successfully' })
-  async getUserPermissions(@Param('userId') userId: string) {
-    return this.permissionsService.getUserPermissions(userId);
+  async getUserPermissions(@Param('userId') userId: string, @Request() req) {
+    return this.permissionsService.getUserPermissions(userId, req.user.organizationId);
   }
 
   @Post('user/:userId/module/:module')
@@ -32,6 +32,7 @@ export class PermissionsController {
     @Param('userId') userId: string,
     @Param('module') module: PermissionModuleType,
     @Body() updatePermissionDto: UpdatePermissionDto,
+    @Request() req,
   ) {
     // Map the DTO to the format expected by the service
     const permissionData = {
@@ -41,7 +42,7 @@ export class PermissionsController {
       delete: updatePermissionDto.delete,
     };
     
-    return this.permissionsService.createOrUpdatePermission(userId, module, permissionData);
+    return this.permissionsService.createOrUpdatePermission(userId, req.user.organizationId, module, permissionData);
   }
 
   @Delete('user/:userId/module/:module')
@@ -52,8 +53,9 @@ export class PermissionsController {
   async deleteUserModulePermission(
     @Param('userId') userId: string,
     @Param('module') module: PermissionModuleType,
+    @Request() req,
   ) {
-    await this.permissionsService.deletePermission(userId, module);
+    await this.permissionsService.deletePermission(userId, req.user.organizationId, module);
     return { message: 'Permission deleted successfully' };
   }
 
@@ -83,6 +85,9 @@ export class PermissionsController {
     // Ensure users can only check their own permissions or owners checking staff permissions
     if (req.user.id !== userId && req.user.role !== UserRole.OWNER) {
       throw new ForbiddenException('You are not authorized to check this user\'s permissions');
+    }
+    if (req.user.id !== userId) {
+      await this.permissionsService.assertUserInOrganization(userId, req.user.organizationId);
     }
     
     const hasPermission = await this.permissionsService.hasPermission(userId, module, action);

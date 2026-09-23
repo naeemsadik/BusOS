@@ -12,21 +12,25 @@ export class PermissionsService {
     private userRepository: Repository<User>,
   ) {}
 
-  async getUserPermissions(userId: string): Promise<UserPermission[]> {
+  private async requireOrganizationUser(userId: string, organizationId: string): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId, organizationId } });
+    if (!user) throw new NotFoundException('User not found in your organization');
+    return user;
+  }
+
+  async getUserPermissions(userId: string, organizationId: string): Promise<UserPermission[]> {
+    await this.requireOrganizationUser(userId, organizationId);
     return this.permissionRepository.find({ where: { userId } });
   }
 
-  async createOrUpdatePermission(userId: string, module: PermissionModuleType, permissions: {
+  async createOrUpdatePermission(userId: string, organizationId: string, module: PermissionModuleType, permissions: {
     view?: boolean;
     create?: boolean;
     edit?: boolean;
     delete?: boolean;
   }): Promise<UserPermission> {
     // First, ensure the user exists and is not an owner
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+    const user = await this.requireOrganizationUser(userId, organizationId);
 
     if (user.role === UserRole.OWNER) {
       throw new BadRequestException('Cannot modify permissions for owners');
@@ -60,7 +64,8 @@ export class PermissionsService {
     return this.permissionRepository.save(permission);
   }
 
-  async deletePermission(userId: string, module: PermissionModuleType): Promise<void> {
+  async deletePermission(userId: string, organizationId: string, module: PermissionModuleType): Promise<void> {
+    await this.requireOrganizationUser(userId, organizationId);
     const result = await this.permissionRepository.delete({ userId, module });
     if (result.affected === 0) {
       throw new NotFoundException(`Permission not found for user ${userId} and module ${module}`);
@@ -99,13 +104,22 @@ export class PermissionsService {
     const modules = Object.values(PermissionModuleType);
     
     for (const module of modules) {
-      await this.createOrUpdatePermission(userId, module, {
-        view: false,
-        create: false,
-        edit: false,
-        delete: false,
-      });
+      const exists = await this.permissionRepository.findOne({ where: { userId, module } });
+      if (!exists) {
+        await this.permissionRepository.save(this.permissionRepository.create({
+          userId,
+          module,
+          canView: false,
+          canCreate: false,
+          canEdit: false,
+          canDelete: false,
+        }));
+      }
     }
+  }
+
+  async assertUserInOrganization(userId: string, organizationId: string): Promise<void> {
+    await this.requireOrganizationUser(userId, organizationId);
   }
 
   async getModulePermissions(organizationId: string, module: PermissionModuleType): Promise<{ userId: string; user: User; permission: UserPermission }[]> {

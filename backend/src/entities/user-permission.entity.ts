@@ -23,6 +23,7 @@ export enum PermissionModuleType {
   SUPPLIERS = 'suppliers',
   DASHBOARD = 'dashboard',
   WEBSITE = 'website',
+  HRM = 'hrm',
 }
 
 @Entity('user_permissions')
