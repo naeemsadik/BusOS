@@ -1,0 +1,271 @@
+{
+  "version": 1,
+  "project": {
+    "name": "pos-frontend",
+    "productType": null,
+    "stack": [
+      "nextjs",
+      "react",
+      "shadcn",
+      "tailwind-v3",
+      "vite"
+    ]
+  },
+  "sources": {
+    "tokens": [
+      "app/globals.css"
+    ],
+    "components": [
+      "components/ui"
+    ],
+    "assets": [],
+    "instructions": []
+  },
+  "design": {
+    "colorMode": "light-and-dark",
+    "colors": {
+      "--background": {
+        "value": "225 24% 8%",
+        "source": "app/globals.css"
+      },
+      "--foreground": {
+        "value": "38 28% 94%",
+        "source": "app/globals.css"
+      },
+      "--card-foreground": {
+        "value": "38 28% 94%",
+        "source": "app/globals.css"
+      },
+      "--popover-foreground": {
+        "value": "38 28% 94%",
+        "source": "app/globals.css"
+      },
+      "--primary": {
+        "value": "8 82% 64%",
+        "source": "app/globals.css"
+      },
+      "--primary-foreground": {
+        "value": "225 24% 8%",
+        "source": "app/globals.css"
+      },
+      "--secondary": {
+        "value": "225 17% 17%",
+        "source": "app/globals.css"
+      },
+      "--secondary-foreground": {
+        "value": "38 28% 94%",
+        "source": "app/globals.css"
+      },
+      "--muted": {
+        "value": "225 17% 16%",
+        "source": "app/globals.css"
+      },
+      "--muted-foreground": {
+        "value": "220 12% 66%",
+        "source": "app/globals.css"
+      },
+      "--accent": {
+        "value": "263 35% 22%",
+        "source": "app/globals.css"
+      },
+      "--accent-foreground": {
+        "value": "263 88% 82%",
+        "source": "app/globals.css"
+      },
+      "--destructive": {
+        "value": "0 64% 48%",
+        "source": "app/globals.css"
+      },
+      "--destructive-foreground": {
+        "value": "0 0% 98%",
+        "source": "app/globals.css"
+      },
+      "--border": {
+        "value": "225 15% 22%",
+        "source": "app/globals.css"
+      },
+      "--ring": {
+        "value": "8 82% 64%",
+        "source": "app/globals.css"
+      },
+      "--chart-1": {
+        "value": "8 82% 64%",
+        "source": "app/globals.css"
+      },
+      "--chart-2": {
+        "value": "263 76% 70%",
+        "source": "app/globals.css"
+      },
+      "--chart-3": {
+        "value": "158 58% 48%",
+        "source": "app/globals.css"
+      },
+      "--chart-4": {
+        "value": "38 92% 58%",
+        "source": "app/globals.css"
+      },
+      "--chart-5": {
+        "value": "220 76% 68%",
+        "source": "app/globals.css"
+      },
+      "--sidebar-background": {
+        "value": "225 25% 7%",
+        "source": "app/globals.css"
+      },
+      "--sidebar-foreground": {
+        "value": "38 28% 94%",
+        "source": "app/globals.css"
+      },
+      "--sidebar-primary": {
+        "value": "8 82% 64%",
+        "source": "app/globals.css"
+      },
+      "--sidebar-primary-foreground": {
+        "value": "225 24% 8%",
+        "source": "app/globals.css"
+      },
+      "--sidebar-accent": {
+        "value": "263 35% 22%",
+        "source": "app/globals.css"
+      },
+      "--sidebar-accent-foreground": {
+        "value": "263 88% 82%",
+        "source": "app/globals.css"
+      },
+      "--sidebar-border": {
+        "value": "225 15% 18%",
+        "source": "app/globals.css"
+      },
+      "--sidebar-ring": {
+        "value": "8 82% 64%",
+        "source": "app/globals.css"
+      }
+    },
+    "typography": {
+      "--font-manrope": {
+        "value": "\"Manrope Variable\"",
+        "source": "app/globals.css"
+      },
+      "--font-bangla": {
+        "value": "\"Noto Sans Bengali Variable\"",
+        "source": "app/globals.css"
+      }
+    },
+    "spacing": {},
+    "radius": {
+      "--radius": {
+        "value": "0.75rem",
+        "source": "app/globals.css"
+      }
+    },
+    "shadows": {},
+    "motion": {},
+    "density": "unknown"
+  },
+  "components": {
+    "installed": [
+      "accordion",
+      "alert",
+      "alert-dialog",
+      "aspect-ratio",
+      "avatar",
+      "badge",
+      "breadcrumb",
+      "button",
+      "calendar",
+      "card",
+      "carousel",
+      "chart",
+      "checkbox",
+      "collapsible",
+      "command",
+      "context-menu",
+      "dialog",
+      "drawer",
+      "dropdown-menu",
+      "form",
+      "hover-card",
+      "input",
+      "input-otp",
+      "label",
+      "menubar",
+      "navigation-menu",
+      "page-primitives",
+      "pagination",
+      "popover",
+      "progress",
+      "radio-group",
+      "resizable",
+      "scroll-area",
+      "select",
+      "separator",
+      "sheet",
+      "sidebar",
+      "skeleton",
+      "slider",
+      "sonner",
+      "switch",
+      "table",
+      "tabs",
+      "textarea",
+      "toast",
+      "toaster",
+      "toggle",
+      "toggle-group",
+      "tooltip",
+      "use-mobile",
+      "use-toast"
+    ],
+    "preferredPrimitives": [
+      "radix-ui"
+    ],
+    "patterns": []
+  },
+  "constraints": {
+    "must": [
+      "Use Lucide icons instead of emojis",
+      "Reuse installed shadcn primitives and project color tokens"
+    ],
+    "avoid": [
+      "Decorative gradients, glass effects, and oversized dashboard headings"
+    ]
+  },
+  "decisions": [
+    "HRM uses the existing operational dashboard density, token palette, table patterns, and page primitives"
+  ],
+  "evidence": [
+    {
+      "fact": "components.installed",
+      "source": "components/ui"
+    },
+    {
+      "fact": "design.colorMode:light-and-dark",
+      "source": "app/globals.css"
+    },
+    {
+      "fact": "design.tokens",
+      "source": "app/globals.css"
+    },
+    {
+      "fact": "project.stack:nextjs",
+      "source": "package.json"
+    },
+    {
+      "fact": "project.stack:react",
+      "source": "package.json"
+    },
+    {
+      "fact": "project.stack:shadcn",
+      "source": "components.json"
+    },
+    {
+      "fact": "project.stack:tailwind-v3",
+      "source": "package.json"
+    },
+    {
+      "fact": "project.stack:vite",
+      "source": "package.json"
+    }
+  ],
+  "generatedAt": "2026-09-23T07:09:33.625Z"
+}

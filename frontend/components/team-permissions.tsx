@@ -68,6 +68,10 @@ const moduleInfo = {
     name: 'Website',
     description: 'Manage and publish the public storefront.'
   },
+  [PermissionModuleType.HRM]: {
+    name: 'HRM',
+    description: 'Manage employee profiles and attendance. Salary and payroll remain owner-only.'
+  },
 };
 
 export default function TeamPermissions(_props: TeamPermissionsProps) {

@@ -69,6 +69,7 @@ export enum PermissionModuleType {
   SUPPLIERS = 'suppliers',
   DASHBOARD = 'dashboard',
   WEBSITE = 'website',
+  HRM = 'hrm',
 }
 
 export interface UserPermission {

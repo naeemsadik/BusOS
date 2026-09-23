@@ -79,6 +79,7 @@ export default function PermissionGuardPage({
           PermissionModuleType.SETTINGS,
           PermissionModuleType.PAYMENTS,
           PermissionModuleType.WEBSITE,
+          PermissionModuleType.HRM,
         ];
 
         const moduleToRoute: Record<PermissionModuleType, string> = {
@@ -95,6 +96,7 @@ export default function PermissionGuardPage({
           [PermissionModuleType.DASHBOARD]: '/dashboard',
           [PermissionModuleType.INVOICES]: '/invoices',
           [PermissionModuleType.WEBSITE]: '/website',
+          [PermissionModuleType.HRM]: '/hrm',
         };
 
         // Check each module in priority order

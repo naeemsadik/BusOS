@@ -7,7 +7,7 @@ import { useTheme } from "next-themes"
 import {
   BadgeDollarSign, Building2, CreditCard, FileText, Globe2, LayoutDashboard,
   LogOut, Megaphone, MessageSquare, Moon, Package, Receipt, Settings,
-  ShoppingCart, Sun, Truck, User, Users,
+  BriefcaseBusiness, Clock3, ShoppingCart, Sun, Truck, User, Users,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -38,6 +38,8 @@ const groups = [
     { label: "expenses", href: "/expenses", icon: CreditCard, module: PermissionModuleType.EXPENSES },
     { label: "reports", href: "/reports", icon: FileText, module: PermissionModuleType.REPORTS },
     { label: "delivery", href: "/delivery", icon: Truck, module: PermissionModuleType.DELIVERY },
+    { label: "hrm", href: "/hrm", icon: BriefcaseBusiness, module: PermissionModuleType.HRM },
+    { label: "myAttendance", href: "/hrm/my-attendance", icon: Clock3, module: PermissionModuleType.HRM, selfService: true },
   ]},
   { label: "growth", items: [
     { label: "website", href: "/website", icon: Globe2, module: PermissionModuleType.WEBSITE },
@@ -64,6 +66,7 @@ export function AppSidebar() {
   const canSee = (item: (typeof groups)[number]["items"][number]) => {
     if (!user || !modulePermissions) return false
     if (isExpired) return item.href === "/subscription"
+    if ("selfService" in item && item.selfService) return user.role === UserRole.STAFF
     if (user.role === UserRole.OWNER || user.role === UserRole.ADMIN) return true
     return modulePermissions[item.module] === true
   }
