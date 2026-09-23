@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto';
 import {
   Attendance, AttendanceSource, AttendanceStatus, Department, Designation, Employee,
   EmployeeCompensation, EmploymentStatus, Holiday, HrmSettings, PayrollItem, PayrollStatus,
-  User, UserRole,
+  PayrollAdjustmentType, PayrollRun, PayType, User, UserRole,
 } from '../entities';
 import {
   CreateDepartmentDto,
@@ -15,12 +15,16 @@ import {
   BulkAttendanceDto,
   CreateHolidayDto,
   CreateCompensationDto,
+  CreatePayrollRunDto,
   EmployeeQueryDto,
   LinkEmployeeAccountDto,
   RecordLeaveDto,
+  MarkPayrollPaidDto,
+  PayrollRunQueryDto,
   UpsertAttendanceDto,
   UpdateHolidayDto,
   UpdateCompensationDto,
+  UpdatePayrollItemDto,
   UpdateDepartmentDto,
   UpdateDesignationDto,
   UpdateEmployeeDto,
@@ -39,6 +43,7 @@ export class HrmService {
     @InjectRepository(Holiday) private readonly holidayRepo: Repository<Holiday>,
     @InjectRepository(EmployeeCompensation) private readonly compensationRepo: Repository<EmployeeCompensation>,
     @InjectRepository(PayrollItem) private readonly payrollItemRepo: Repository<PayrollItem>,
+    @InjectRepository(PayrollRun) private readonly payrollRunRepo: Repository<PayrollRun>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -341,6 +346,189 @@ export class HrmService {
     Object.assign(compensation, dto);
     return this.compensationRepo.save(compensation);
   }
+
+  async getPayrollRuns(organizationId: string, query: PayrollRunQueryDto) {
+    const qb = this.payrollRunRepo.createQueryBuilder('run')
+      .where('run.organizationId = :organizationId', { organizationId });
+    if (query.year) qb.andWhere('run.year = :year', { year: query.year });
+    if (query.status) qb.andWhere('run.status = :status', { status: query.status });
+    const [runs, total] = await qb.orderBy('run.year', 'DESC').addOrderBy('run.month', 'DESC')
+      .skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
+    return { runs, total, page: query.page, totalPages: Math.ceil(total / query.limit) };
+  }
+
+  async getPayrollRun(organizationId: string, id: string): Promise<PayrollRun> {
+    const run = await this.payrollRunRepo.findOne({
+      where: { id, organizationId }, relations: ['items'],
+      order: { items: { employeeCode: 'ASC' } },
+    });
+    if (!run) throw new NotFoundException('Payroll run not found');
+    return run;
+  }
+
+  async generatePayroll(organizationId: string, actorUserId: string, dto: CreatePayrollRunDto): Promise<PayrollRun> {
+    const settings = await this.getSettings(organizationId);
+    if (!settings.isConfigured) throw new BadRequestException('Configure HRM settings before generating payroll');
+    const periodStart = `${dto.year}-${String(dto.month).padStart(2, '0')}-01`;
+    const periodEnd = new Date(Date.UTC(dto.year, dto.month, 0)).toISOString().slice(0, 10);
+    return this.dataSource.transaction(async (manager) => {
+      const runRepo = manager.getRepository(PayrollRun);
+      const itemRepo = manager.getRepository(PayrollItem);
+      let run = await runRepo.findOne({ where: { organizationId, year: dto.year, month: dto.month }, relations: ['items'] });
+      if (run && run.status !== PayrollStatus.DRAFT) throw new ConflictException('Only draft payroll can be regenerated');
+      const oldAdjustments = new Map((run?.items || []).map((item) => [item.employeeId, item.adjustments]));
+      if (!run) {
+        run = await runRepo.save(runRepo.create({
+          organizationId, year: dto.year, month: dto.month, periodStart, periodEnd,
+          currencyCode: settings.currencyCode, status: PayrollStatus.DRAFT, generatedById: actorUserId,
+        }));
+      } else {
+        await itemRepo.delete({ runId: run.id });
+      }
+
+      const employees = await manager.getRepository(Employee).createQueryBuilder('employee')
+        .where('employee.organizationId = :organizationId', { organizationId })
+        .andWhere('employee.joiningDate <= :periodEnd', { periodEnd })
+        .andWhere('(employee.terminationDate IS NULL OR employee.terminationDate >= :periodStart)', { periodStart })
+        .orderBy('employee.employeeCode', 'ASC').getMany();
+      const holidays = await manager.getRepository(Holiday).createQueryBuilder('holiday')
+        .where('holiday.organizationId = :organizationId', { organizationId })
+        .andWhere('holiday.holidayDate BETWEEN :periodStart AND :periodEnd', { periodStart, periodEnd }).getMany();
+      const holidayMap = new Map(holidays.map((holiday) => [holiday.holidayDate, holiday]));
+      let totalNetMinor = 0;
+
+      for (const employee of employees) {
+        const revisions = await manager.getRepository(EmployeeCompensation).createQueryBuilder('compensation')
+          .where('compensation.organizationId = :organizationId', { organizationId })
+          .andWhere('compensation.employeeId = :employeeId', { employeeId: employee.id })
+          .andWhere('compensation.effectiveFrom <= :periodEnd', { periodEnd })
+          .andWhere('(compensation.effectiveTo IS NULL OR compensation.effectiveTo >= :periodStart)', { periodStart })
+          .orderBy('compensation.effectiveFrom', 'ASC').getMany();
+        if (!revisions.length) continue;
+        const records = await manager.getRepository(Attendance).createQueryBuilder('attendance')
+          .where('attendance.organizationId = :organizationId', { organizationId })
+          .andWhere('attendance.employeeId = :employeeId', { employeeId: employee.id })
+          .andWhere('attendance.workDate BETWEEN :periodStart AND :periodEnd', { periodStart, periodEnd }).getMany();
+        const recordMap = new Map(records.map((record) => [record.workDate, record]));
+        const workDays = employee.workDaysOverride || settings.workDays;
+        const allScheduledDates = this.dateRange(periodStart, periodEnd).filter((date) => workDays.includes(this.weekday(date)));
+        if (!allScheduledDates.length) throw new BadRequestException(`No scheduled workdays exist for ${employee.employeeCode}`);
+        let scheduledDays = 0, presentDays = 0, absentDays = 0, paidLeaveDays = 0;
+        let unpaidLeaveDays = 0, paidHolidayDays = 0, unresolvedDays = 0, workedMinutes = 0, lateMinutes = 0;
+        let baseMinor = 0;
+        for (const date of allScheduledDates) {
+          if (date < employee.joiningDate || (employee.terminationDate && date > employee.terminationDate)) continue;
+          scheduledDays += 1;
+          const compensation = [...revisions].reverse().find((item) => item.effectiveFrom <= date && (!item.effectiveTo || item.effectiveTo >= date));
+          if (!compensation) throw new BadRequestException(`Compensation does not cover ${date} for ${employee.employeeCode}`);
+          const attendance = recordMap.get(date);
+          const holiday = holidayMap.get(date);
+          let payableDaily = false;
+          if (holiday?.isPaid || attendance?.status === AttendanceStatus.HOLIDAY) {
+            paidHolidayDays += 1;
+            payableDaily = true;
+          } else if (!attendance) {
+            unresolvedDays += 1;
+          } else {
+            workedMinutes += attendance.workedMinutes;
+            lateMinutes += attendance.lateMinutes;
+            if (attendance.status === AttendanceStatus.PRESENT) { presentDays += 1; payableDaily = true; }
+            else if (attendance.status === AttendanceStatus.ABSENT) absentDays += 1;
+            else if (attendance.status === AttendanceStatus.PAID_LEAVE) { paidLeaveDays += 1; payableDaily = true; }
+            else if (attendance.status === AttendanceStatus.UNPAID_LEAVE) unpaidLeaveDays += 1;
+          }
+          const rateMinor = this.toMinor(Number(compensation.baseRate));
+          if (compensation.payType === PayType.DAILY) {
+            if (payableDaily) baseMinor += rateMinor;
+          } else {
+            baseMinor += rateMinor / allScheduledDates.length;
+          }
+        }
+        baseMinor = Math.round(baseMinor);
+        const latest = revisions[revisions.length - 1];
+        const adjustments = oldAdjustments.get(employee.id) || [];
+        const additionsMinor = adjustments.filter((item) => item.type === PayrollAdjustmentType.EARNING)
+          .reduce((sum, item) => sum + this.toMinor(item.amount), 0);
+        const deductionsMinor = adjustments.filter((item) => item.type === PayrollAdjustmentType.DEDUCTION)
+          .reduce((sum, item) => sum + this.toMinor(item.amount), 0);
+        const netMinor = Math.max(0, baseMinor + additionsMinor - deductionsMinor);
+        totalNetMinor += netMinor;
+        await itemRepo.save(itemRepo.create({
+          runId: run.id, employeeId: employee.id, compensationId: latest.id,
+          employeeCode: employee.employeeCode, employeeName: `${employee.firstName} ${employee.lastName}`.trim(),
+          payType: latest.payType, baseRate: Number(latest.baseRate), baseEarnings: this.fromMinor(baseMinor),
+          adjustments, additionsTotal: this.fromMinor(additionsMinor), deductionsTotal: this.fromMinor(deductionsMinor),
+          netPay: this.fromMinor(netMinor), scheduledDays, presentDays, absentDays, paidLeaveDays,
+          unpaidLeaveDays, paidHolidayDays, unresolvedDays, workedMinutes, lateMinutes,
+        }));
+      }
+      run.totalNetPay = this.fromMinor(totalNetMinor);
+      run.generatedById = actorUserId;
+      await runRepo.save(run);
+      return runRepo.findOneOrFail({ where: { id: run.id, organizationId }, relations: ['items'] });
+    });
+  }
+
+  async updatePayrollItem(organizationId: string, runId: string, itemId: string, dto: UpdatePayrollItemDto) {
+    const run = await this.getPayrollRun(organizationId, runId);
+    if (run.status !== PayrollStatus.DRAFT) throw new ConflictException('Only draft payroll can be edited');
+    const item = await this.payrollItemRepo.findOne({ where: { id: itemId, runId } });
+    if (!item) throw new NotFoundException('Payroll item not found');
+    item.adjustments = dto.adjustments;
+    const additions = dto.adjustments.filter((value) => value.type === PayrollAdjustmentType.EARNING)
+      .reduce((sum, value) => sum + this.toMinor(value.amount), 0);
+    const deductions = dto.adjustments.filter((value) => value.type === PayrollAdjustmentType.DEDUCTION)
+      .reduce((sum, value) => sum + this.toMinor(value.amount), 0);
+    item.additionsTotal = this.fromMinor(additions);
+    item.deductionsTotal = this.fromMinor(deductions);
+    item.netPay = this.fromMinor(Math.max(0, this.toMinor(Number(item.baseEarnings)) + additions - deductions));
+    await this.payrollItemRepo.save(item);
+    await this.recalculateRunTotal(runId);
+    return item;
+  }
+
+  async finalizePayroll(organizationId: string, id: string): Promise<PayrollRun> {
+    const run = await this.getPayrollRun(organizationId, id);
+    if (run.status !== PayrollStatus.DRAFT) throw new ConflictException('Only draft payroll can be finalized');
+    const settings = await this.getSettings(organizationId);
+    if (this.localDate(new Date(), settings.timezone) <= run.periodEnd) {
+      throw new BadRequestException('Payroll cannot be finalized before the period ends');
+    }
+    if (!run.items.length) throw new BadRequestException('Payroll has no employees');
+    if (run.items.some((item) => item.unresolvedDays > 0)) throw new BadRequestException('Resolve all missing attendance before finalizing');
+    run.status = PayrollStatus.FINALIZED;
+    run.finalizedAt = new Date();
+    return this.payrollRunRepo.save(run);
+  }
+
+  async reopenPayroll(organizationId: string, id: string): Promise<PayrollRun> {
+    const run = await this.getPayrollRun(organizationId, id);
+    if (run.status !== PayrollStatus.FINALIZED) throw new ConflictException('Only finalized unpaid payroll can be reopened');
+    run.status = PayrollStatus.DRAFT;
+    run.finalizedAt = null;
+    return this.payrollRunRepo.save(run);
+  }
+
+  async markPayrollPaid(organizationId: string, id: string, dto: MarkPayrollPaidDto): Promise<PayrollRun> {
+    const run = await this.getPayrollRun(organizationId, id);
+    if (run.status !== PayrollStatus.FINALIZED) throw new ConflictException('Only finalized payroll can be marked paid');
+    run.status = PayrollStatus.PAID;
+    run.paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
+    run.paymentReference = dto.paymentReference || null;
+    run.paymentNote = dto.paymentNote || null;
+    return this.payrollRunRepo.save(run);
+  }
+
+  private async recalculateRunTotal(runId: string): Promise<void> {
+    const items = await this.payrollItemRepo.find({ where: { runId } });
+    await this.payrollRunRepo.update(runId, {
+      totalNetPay: this.fromMinor(items.reduce((sum, item) => sum + this.toMinor(Number(item.netPay)), 0)),
+    });
+  }
+
+  private weekday(date: string): number { return new Date(`${date}T00:00:00Z`).getUTCDay(); }
+  private toMinor(value: number): number { return Math.round(value * 100); }
+  private fromMinor(value: number): number { return value / 100; }
 
   async getMyEmployee(organizationId: string, userId: string): Promise<Employee> {
     const employee = await this.employeeRepo.findOne({

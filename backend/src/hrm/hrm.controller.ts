@@ -15,12 +15,16 @@ import {
   BulkAttendanceDto,
   CreateHolidayDto,
   CreateCompensationDto,
+  CreatePayrollRunDto,
   EmployeeQueryDto,
   LinkEmployeeAccountDto,
   RecordLeaveDto,
+  MarkPayrollPaidDto,
+  PayrollRunQueryDto,
   UpsertAttendanceDto,
   UpdateHolidayDto,
   UpdateCompensationDto,
+  UpdatePayrollItemDto,
   UpdateDepartmentDto,
   UpdateDesignationDto,
   UpdateEmployeeDto,
@@ -173,6 +177,42 @@ export class HrmController {
   @Patch('compensations/:id') @UseGuards(RolesGuard) @Roles(UserRole.OWNER)
   updateCompensation(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCompensationDto) {
     return this.hrm.updateCompensation(req.user.organizationId, id, dto);
+  }
+
+  @Get('payroll/runs') @UseGuards(RolesGuard) @Roles(UserRole.OWNER)
+  payrollRuns(@Request() req, @Query() query: PayrollRunQueryDto) {
+    return this.hrm.getPayrollRuns(req.user.organizationId, query);
+  }
+
+  @Post('payroll/runs') @UseGuards(RolesGuard) @Roles(UserRole.OWNER)
+  generatePayroll(@Request() req, @Body() dto: CreatePayrollRunDto) {
+    return this.hrm.generatePayroll(req.user.organizationId, req.user.id, dto);
+  }
+
+  @Get('payroll/runs/:id') @UseGuards(RolesGuard) @Roles(UserRole.OWNER)
+  payrollRun(@Request() req, @Param('id', ParseUUIDPipe) id: string) {
+    return this.hrm.getPayrollRun(req.user.organizationId, id);
+  }
+
+  @Patch('payroll/runs/:runId/items/:itemId') @UseGuards(RolesGuard) @Roles(UserRole.OWNER)
+  updatePayrollItem(
+    @Request() req, @Param('runId', ParseUUIDPipe) runId: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string, @Body() dto: UpdatePayrollItemDto,
+  ) { return this.hrm.updatePayrollItem(req.user.organizationId, runId, itemId, dto); }
+
+  @Post('payroll/runs/:id/finalize') @UseGuards(RolesGuard) @Roles(UserRole.OWNER)
+  finalizePayroll(@Request() req, @Param('id', ParseUUIDPipe) id: string) {
+    return this.hrm.finalizePayroll(req.user.organizationId, id);
+  }
+
+  @Post('payroll/runs/:id/reopen') @UseGuards(RolesGuard) @Roles(UserRole.OWNER)
+  reopenPayroll(@Request() req, @Param('id', ParseUUIDPipe) id: string) {
+    return this.hrm.reopenPayroll(req.user.organizationId, id);
+  }
+
+  @Post('payroll/runs/:id/mark-paid') @UseGuards(RolesGuard) @Roles(UserRole.OWNER)
+  markPayrollPaid(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Body() dto: MarkPayrollPaidDto) {
+    return this.hrm.markPayrollPaid(req.user.organizationId, id, dto);
   }
 
   @Get('attendance/me')

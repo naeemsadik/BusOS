@@ -18,8 +18,9 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
-import { AttendanceStatus, EmploymentStatus, PayType, PayrollAdjustmentType } from '../../entities';
+import { AttendanceStatus, EmploymentStatus, PayType, PayrollAdjustmentType, PayrollStatus } from '../../entities';
 
 export class UpdateHrmSettingsDto {
   @IsString() @MaxLength(100) timezone: string;
@@ -165,4 +166,33 @@ export class UpdateCompensationDto {
   @IsOptional() @IsEnum(PayType) payType?: PayType;
   @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Type(() => Number) baseRate?: number;
   @IsOptional() @IsString() @MaxLength(1000) notes?: string;
+}
+
+export class CreatePayrollRunDto {
+  @IsInt() @Min(2000) @Max(2200) @Type(() => Number) year: number;
+  @IsInt() @Min(1) @Max(12) @Type(() => Number) month: number;
+}
+
+export class PayrollRunQueryDto {
+  @IsOptional() @IsInt() @Min(2000) @Max(2200) @Type(() => Number) year?: number;
+  @IsOptional() @IsEnum(PayrollStatus) status?: PayrollStatus;
+  @IsOptional() @IsInt() @Min(1) @Type(() => Number) page = 1;
+  @IsOptional() @IsInt() @Min(1) @Max(100) @Type(() => Number) limit = 20;
+}
+
+export class PayrollAdjustmentDto {
+  @IsString() @Length(1, 100) label: string;
+  @IsEnum(PayrollAdjustmentType) type: PayrollAdjustmentType;
+  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Type(() => Number) amount: number;
+}
+
+export class UpdatePayrollItemDto {
+  @IsArray() @ArrayMaxSize(50) @ValidateNested({ each: true }) @Type(() => PayrollAdjustmentDto)
+  adjustments: PayrollAdjustmentDto[];
+}
+
+export class MarkPayrollPaidDto {
+  @IsOptional() @IsDateString() paidAt?: string;
+  @IsOptional() @IsString() @MaxLength(200) paymentReference?: string;
+  @IsOptional() @IsString() @MaxLength(1000) paymentNote?: string;
 }
