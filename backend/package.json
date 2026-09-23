@@ -22,6 +22,10 @@
     "db:reset": "npm run db:setup && npm run start:dev",
     "admin:create": "node scripts/create-admin.js",
     "db:fix-shipping": "node scripts/fix-shipping-amounts.js"
+    ,"typeorm": "node --require ts-node/register ./node_modules/typeorm/cli.js -d src/database/data-source.ts"
+    ,"migration:run": "npm run typeorm -- migration:run"
+    ,"migration:show": "npm run typeorm -- migration:show"
+    ,"migration:revert": "npm run typeorm -- migration:revert"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

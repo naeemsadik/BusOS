@@ -11,6 +11,7 @@ import {
 import { Organization } from './organization.entity';
 import { Customer } from './customer.entity';
 import { OrderItem } from './order-item.entity';
+import { StorefrontSite } from './storefront-site.entity';
 
 export enum OrderStatus {
   PENDING = 'pending',
@@ -40,6 +41,8 @@ export enum PaymentMethod {
   COD = 'cod',
 }
 
+export enum OrderSource { POS = 'pos', MANUAL = 'manual', STOREFRONT = 'storefront' }
+
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn('uuid')
@@ -47,6 +50,21 @@ export class Order {
 
   @Column({ unique: true })
   orderNumber: string;
+
+  @Column({ type: 'enum', enum: OrderSource, default: OrderSource.MANUAL })
+  source: OrderSource;
+
+  @ManyToOne(() => StorefrontSite, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'storefrontSiteId' })
+  storefrontSite: StorefrontSite | null;
+
+  @Column({ type: 'uuid', nullable: true }) storefrontSiteId: string | null;
+  @Column({ type: 'varchar', length: 2, nullable: true }) storefrontLocale: 'en' | 'bn' | null;
+  @Column({ type: 'varchar', length: 100, nullable: true }) checkoutIdempotencyKey: string | null;
+  @Column({ type: 'varchar', length: 64, nullable: true, select: false }) confirmationTokenHash: string | null;
+  @Column({ type: 'timestamp', nullable: true }) confirmationExpiresAt: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) stockCommittedAt: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) stockRestoredAt: Date | null;
 
   @ManyToOne(() => Customer, { nullable: true })
   @JoinColumn({ name: 'customerId' })

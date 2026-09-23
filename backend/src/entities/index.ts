@@ -8,7 +8,7 @@ export { Product, ProductStatus, StockStatus } from './product.entity';
 export { StockMovement, StockMovementType } from './stock-movement.entity';
 export { Category } from './category.entity';
 export { Customer, CustomerStatus } from './customer.entity';
-export { Order, OrderStatus, PaymentStatus, PaymentMethod } from './order.entity';
+export { Order, OrderStatus, PaymentStatus, PaymentMethod, OrderSource } from './order.entity';
 export { OrderItem } from './order-item.entity';
 export { Invoice, InvoiceStatus } from './invoice.entity';
 export { InvoiceItem } from './invoice-item.entity';
@@ -22,6 +22,8 @@ export { SmsPackage, SmsPackageStatus } from './sms-package.entity';
 export { SmsLog, SmsType, SmsStatus } from './sms-log.entity';
 export { SmsSettings } from './sms-settings.entity';
 export { UserPermission, PermissionModuleType } from './user-permission.entity';
+export { StorefrontSite, StorefrontPublicationStatus } from './storefront-site.entity';
+export { StorefrontAsset } from './storefront-asset.entity';
 export {
   UserRole,
   UserStatus,

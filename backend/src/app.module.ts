@@ -25,6 +25,7 @@ import { UsersModule } from './users/users.module';
 import { CurrencyModule } from './currency/currency.module';
 import { VoiceModule } from './voice/voice.module';
 import { SocialContentModule } from './social-content/social-content.module';
+import { StorefrontModule } from './storefront/storefront.module';
 import {
   User, 
   Organization, 
@@ -49,7 +50,9 @@ import {
   SmsPackage,
   SmsLog,
   SmsSettings,
-  UserPermission
+  UserPermission,
+  StorefrontSite,
+  StorefrontAsset
 } from './entities';
 
 @Module({
@@ -70,10 +73,10 @@ import {
         ssl: configService.get('DATABASE_SSL') === 'true' ? {
           rejectUnauthorized: configService.get('DATABASE_SSL_REJECT_UNAUTHORIZED') !== 'false',
         } : false,
-        entities: [User, Organization, Subscription, SubscriptionPlanEntity, Invitation, Admin, Product, Category, StockMovement, Customer, Order, OrderItem, Invoice, InvoiceItem, Expense, Delivery, Supplier, BkashPayment, SslcommerzPayment, SmsBalance, SmsPackage, SmsLog, SmsSettings, UserPermission],
-        synchronize:
-          configService.get('TYPEORM_SYNCHRONIZE') === 'true' ||
-          configService.get('NODE_ENV') === 'development',
+        entities: [User, Organization, Subscription, SubscriptionPlanEntity, Invitation, Admin, Product, Category, StockMovement, Customer, Order, OrderItem, Invoice, InvoiceItem, Expense, Delivery, Supplier, BkashPayment, SslcommerzPayment, SmsBalance, SmsPackage, SmsLog, SmsSettings, UserPermission, StorefrontSite, StorefrontAsset],
+        migrations: [__dirname + '/migrations/*{.ts,.js}'],
+        migrationsRun: configService.get('TYPEORM_MIGRATIONS_RUN') === 'true',
+        synchronize: false,
         logging: false,
       }),
       inject: [ConfigService],
@@ -100,6 +103,7 @@ import {
     CurrencyModule,
     VoiceModule,
     SocialContentModule,
+    StorefrontModule,
   ],
   controllers: [AppController],
   providers: [AppService],

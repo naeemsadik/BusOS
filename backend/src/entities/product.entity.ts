@@ -24,6 +24,7 @@ export enum StockStatus {
 
 @Entity('products')
 @Index(['organization', 'sku'], { unique: true })
+@Index(['organization', 'slug'], { unique: true })
 export class Product {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -31,11 +32,35 @@ export class Product {
   @Column({ type: 'varchar', length: 255 })
   name: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  slug: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  nameBn: string | null;
+
   @Column({ type: 'varchar', length: 100, nullable: true })
   sku: string | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   description: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  descriptionBn: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  longDescription: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  longDescriptionBn: string | null;
+
+  @Column({ type: 'boolean', default: true })
+  storefrontVisible: boolean;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  imageAltText: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  imageAltTextBn: string | null;
 
   @Column({ type: 'varchar', length: 100 })
   category: string;

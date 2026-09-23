@@ -18,6 +18,9 @@ export class CreateProductDto {
   @Length(1, 255)
   name: string;
 
+  @IsOptional() @IsString() @Length(1, 255) slug?: string;
+  @IsOptional() @IsString() @Length(0, 255) nameBn?: string;
+
   @Transform(({ value }) =>
     typeof value === 'string' ? value.trim() || undefined : value,
   )
@@ -30,6 +33,12 @@ export class CreateProductDto {
   @IsString()
   @Length(0, 255)
   description?: string;
+  @IsOptional() @IsString() @Length(0, 255) descriptionBn?: string;
+  @IsOptional() @IsString() longDescription?: string;
+  @IsOptional() @IsString() longDescriptionBn?: string;
+  @IsOptional() @IsBoolean() storefrontVisible?: boolean;
+  @IsOptional() @IsString() @Length(0, 255) imageAltText?: string;
+  @IsOptional() @IsString() @Length(0, 255) imageAltTextBn?: string;
 
   @IsString()
   @Length(1, 100)
@@ -134,6 +143,9 @@ export class UpdateProductDto {
   @Length(1, 255)
   name?: string;
 
+  @IsOptional() @IsString() @Length(1, 255) slug?: string;
+  @IsOptional() @IsString() @Length(0, 255) nameBn?: string;
+
   @IsOptional()
   @Transform(({ value }) =>
     typeof value === 'string' ? value.trim() || undefined : value,
@@ -146,6 +158,12 @@ export class UpdateProductDto {
   @IsString()
   @Length(0, 255)
   description?: string;
+  @IsOptional() @IsString() @Length(0, 255) descriptionBn?: string;
+  @IsOptional() @IsString() longDescription?: string;
+  @IsOptional() @IsString() longDescriptionBn?: string;
+  @IsOptional() @IsBoolean() storefrontVisible?: boolean;
+  @IsOptional() @IsString() @Length(0, 255) imageAltText?: string;
+  @IsOptional() @IsString() @Length(0, 255) imageAltTextBn?: string;
 
   @IsOptional()
   @IsString()
