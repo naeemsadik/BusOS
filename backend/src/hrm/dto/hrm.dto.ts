@@ -196,3 +196,10 @@ export class MarkPayrollPaidDto {
   @IsOptional() @IsString() @MaxLength(200) paymentReference?: string;
   @IsOptional() @IsString() @MaxLength(1000) paymentNote?: string;
 }
+
+export class AuditQueryDto {
+  @IsOptional() @IsString() @MaxLength(80) entityType?: string;
+  @IsOptional() @IsString() @MaxLength(80) action?: string;
+  @IsOptional() @IsInt() @Min(1) @Type(() => Number) page = 1;
+  @IsOptional() @IsInt() @Min(1) @Max(100) @Type(() => Number) limit = 20;
+}

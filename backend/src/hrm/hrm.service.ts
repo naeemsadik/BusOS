@@ -5,13 +5,14 @@ import { randomUUID } from 'crypto';
 import {
   Attendance, AttendanceSource, AttendanceStatus, Department, Designation, Employee,
   EmployeeCompensation, EmploymentStatus, Holiday, HrmSettings, PayrollItem, PayrollStatus,
-  PayrollAdjustmentType, PayrollRun, PayType, User, UserRole,
+  HrmAuditLog, PayrollAdjustmentType, PayrollRun, PayType, User, UserRole,
 } from '../entities';
 import {
   CreateDepartmentDto,
   CreateDesignationDto,
   CreateEmployeeDto,
   AttendanceQueryDto,
+  AuditQueryDto,
   BulkAttendanceDto,
   CreateHolidayDto,
   CreateCompensationDto,
@@ -44,6 +45,7 @@ export class HrmService {
     @InjectRepository(EmployeeCompensation) private readonly compensationRepo: Repository<EmployeeCompensation>,
     @InjectRepository(PayrollItem) private readonly payrollItemRepo: Repository<PayrollItem>,
     @InjectRepository(PayrollRun) private readonly payrollRunRepo: Repository<PayrollRun>,
+    @InjectRepository(HrmAuditLog) private readonly auditRepo: Repository<HrmAuditLog>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -519,6 +521,73 @@ export class HrmService {
     return this.payrollRunRepo.save(run);
   }
 
+  async recordAudit(
+    organizationId: string,
+    actorUserId: string,
+    action: string,
+    entityType: string,
+    entityId: string | null,
+    after: unknown,
+  ): Promise<void> {
+    const serialized = after === undefined ? null : JSON.parse(JSON.stringify(after));
+    await this.auditRepo.save(this.auditRepo.create({
+      organizationId, actorUserId, action, entityType, entityId, before: null, after: serialized,
+    }));
+  }
+
+  async getAuditLogs(organizationId: string, query: AuditQueryDto) {
+    const qb = this.auditRepo.createQueryBuilder('audit')
+      .where('audit.organizationId = :organizationId', { organizationId });
+    if (query.entityType) qb.andWhere('audit.entityType = :entityType', { entityType: query.entityType });
+    if (query.action) qb.andWhere('audit.action = :action', { action: query.action });
+    const [logs, total] = await qb.orderBy('audit.createdAt', 'DESC')
+      .skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
+    return { logs, total, page: query.page, totalPages: Math.ceil(total / query.limit) };
+  }
+
+  async exportAttendanceCsv(organizationId: string, query: AttendanceQueryDto): Promise<string> {
+    const qb = this.attendanceRepo.createQueryBuilder('attendance')
+      .leftJoinAndSelect('attendance.employee', 'employee')
+      .where('attendance.organizationId = :organizationId', { organizationId });
+    if (query.employeeId) qb.andWhere('attendance.employeeId = :employeeId', { employeeId: query.employeeId });
+    if (query.startDate) qb.andWhere('attendance.workDate >= :startDate', { startDate: query.startDate });
+    if (query.endDate) qb.andWhere('attendance.workDate <= :endDate', { endDate: query.endDate });
+    if (query.status) qb.andWhere('attendance.status = :status', { status: query.status });
+    const records = await qb.orderBy('attendance.workDate', 'ASC').addOrderBy('employee.employeeCode', 'ASC').take(5001).getMany();
+    if (records.length > 5000) throw new BadRequestException('Export is limited to 5000 attendance records');
+    const rows = records.map((record) => [
+      record.workDate, record.employee.employeeCode,
+      `${record.employee.firstName} ${record.employee.lastName}`.trim(), record.status,
+      record.checkInAt?.toISOString() || '', record.checkOutAt?.toISOString() || '',
+      record.workedMinutes, record.lateMinutes, record.notes || '',
+    ]);
+    return this.toCsv(['Work date', 'Employee code', 'Employee', 'Status', 'Check in', 'Check out', 'Worked minutes', 'Late minutes', 'Notes'], rows);
+  }
+
+  async exportPayrollCsv(organizationId: string, runId: string): Promise<string> {
+    const run = await this.getPayrollRun(organizationId, runId);
+    const rows = run.items.map((item) => [
+      item.employeeCode, item.employeeName, item.payType, item.baseRate, item.baseEarnings,
+      item.additionsTotal, item.deductionsTotal, item.netPay, item.presentDays, item.absentDays,
+      item.paidLeaveDays, item.unpaidLeaveDays, item.paidHolidayDays, item.unresolvedDays,
+    ]);
+    return this.toCsv(
+      ['Employee code', 'Employee', 'Pay type', 'Rate', 'Base earnings', 'Additions', 'Deductions', 'Net pay',
+        'Present', 'Absent', 'Paid leave', 'Unpaid leave', 'Paid holidays', 'Unresolved'], rows,
+    );
+  }
+
+  async getOverview(organizationId: string) {
+    const settings = await this.getSettings(organizationId);
+    const today = this.localDate(new Date(), settings.timezone);
+    const [activeEmployees, todayAttendance, draftPayroll] = await Promise.all([
+      this.employeeRepo.count({ where: { organizationId, status: EmploymentStatus.ACTIVE } }),
+      this.attendanceRepo.count({ where: { organizationId, workDate: today } }),
+      this.payrollRunRepo.findOne({ where: { organizationId, status: PayrollStatus.DRAFT }, order: { year: 'DESC', month: 'DESC' } }),
+    ]);
+    return { activeEmployees, todayAttendance, today, currentDraftPayroll: draftPayroll };
+  }
+
   private async recalculateRunTotal(runId: string): Promise<void> {
     const items = await this.payrollItemRepo.find({ where: { runId } });
     await this.payrollRunRepo.update(runId, {
@@ -529,6 +598,14 @@ export class HrmService {
   private weekday(date: string): number { return new Date(`${date}T00:00:00Z`).getUTCDay(); }
   private toMinor(value: number): number { return Math.round(value * 100); }
   private fromMinor(value: number): number { return value / 100; }
+  private toCsv(headers: string[], rows: Array<Array<string | number>>): string {
+    const cell = (value: string | number) => {
+      let text = String(value ?? '');
+      if (/^[=+\-@]/.test(text)) text = `'${text}`;
+      return `"${text.replace(/"/g, '""')}"`;
+    };
+    return [headers, ...rows].map((row) => row.map(cell).join(',')).join('\r\n');
+  }
 
   async getMyEmployee(organizationId: string, userId: string): Promise<Employee> {
     const employee = await this.employeeRepo.findOne({
