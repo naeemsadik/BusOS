@@ -56,7 +56,7 @@ export class StorefrontService {
       draftDocument: dto.document, enabledLocales: dto.enabledLocales, defaultLocale: dto.defaultLocale,
       themeTokens: dto.themeTokens, seoSettings: dto.seoSettings, orderSettings: dto.orderSettings,
       draftVersion: () => '"draftVersion" + 1',
-    }).where('id = :id AND "organizationId" = :organizationId AND "draftVersion" = :version', {
+    } as any).where('id = :id AND "organizationId" = :organizationId AND "draftVersion" = :version', {
       id: site.id, organizationId, version: dto.expectedVersion,
     }).execute();
     if (!result.affected) {
@@ -149,8 +149,8 @@ export class StorefrontService {
         orderNumber: `WEB-${Date.now().toString(36).toUpperCase()}-${randomUUID().slice(0, 6).toUpperCase()}`,
         source: OrderSource.STOREFRONT, storefrontSiteId: site.id, storefrontLocale: dto.locale || site.defaultLocale,
         checkoutIdempotencyKey: idempotencyKey, customerName: dto.customerName.trim(), customerPhone: dto.customerPhone.trim(),
-        customerEmail: dto.customerEmail?.trim() || null, shippingAddress: dto.shippingAddress.trim(), shippingCity: dto.shippingCity?.trim() || null,
-        notes: dto.notes?.trim() || null, subtotal, taxAmount, shippingAmount, discountAmount: 0,
+        customerEmail: dto.customerEmail?.trim() || undefined, shippingAddress: dto.shippingAddress.trim(), shippingCity: dto.shippingCity?.trim() || undefined,
+        notes: dto.notes?.trim() || undefined, subtotal, taxAmount, shippingAmount, discountAmount: 0,
         total: this.money(subtotal + taxAmount + shippingAmount), paidAmount: 0, status: OrderStatus.PENDING,
         paymentStatus: PaymentStatus.COD, paymentMethod: PaymentMethod.COD, organizationId: site.organizationId,
       });
@@ -159,7 +159,7 @@ export class StorefrontService {
       saved.confirmationTokenHash = this.tokenHash(token); saved.confirmationExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       await manager.save(saved);
       await manager.save(rows.map(row => manager.create(OrderItem, {
-        orderId: saved.id, productId: row.product.id, productName: row.product.name, productSku: row.product.sku || null,
+        orderId: saved.id, productId: row.product.id, productName: row.product.name, productSku: row.product.sku || undefined,
         unitPrice: row.product.price, unitCost: row.product.cost, quantity: row.quantity, discountAmount: 0, total: row.total,
       })));
       return this.orderReceipt(saved, token);

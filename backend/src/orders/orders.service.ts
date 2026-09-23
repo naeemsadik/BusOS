@@ -5,6 +5,7 @@ import { Order, OrderItem, Product, Customer, OrderStatus, PaymentStatus, Organi
 import { CreateOrderDto, UpdateOrderDto, OrderQueryDto } from './dto';
 import { InvoicesService } from '../invoices/invoices.service';
 import { DeliveryService } from '../delivery/delivery.service';
+import { OrderInventoryService } from './order-inventory.service';
 
 @Injectable()
 export class OrdersService {
@@ -31,6 +32,7 @@ export class OrdersService {
     private invoicesService: InvoicesService,
     private dataSource: DataSource,
     private deliveryService: DeliveryService,
+    private orderInventory: OrderInventoryService,
   ) {}
 
   private async generateUniqueOrderNumber(organizationId: string): Promise<string> {
@@ -156,6 +158,7 @@ export class OrdersService {
       search,
       status,
       paymentStatus,
+      source,
       customerId,
       startDate,
       endDate,
@@ -186,6 +189,8 @@ export class OrdersService {
     if (paymentStatus) {
       queryBuilder.andWhere('order.paymentStatus = :paymentStatus', { paymentStatus });
     }
+
+    if (source) queryBuilder.andWhere('order.source = :source', { source });
 
     if (customerId) {
       queryBuilder.andWhere('order.customerId = :customerId', { customerId });
@@ -267,10 +272,7 @@ export class OrdersService {
     await queryRunner.startTransaction();
 
     try {
-      // If order is being marked as confirmed and was pending, check stock
-      if (updateOrderDto.status === OrderStatus.CONFIRMED && order.status === OrderStatus.PENDING) {
-        await this.validateAndUpdateStock(order);
-      }
+      if (updateOrderDto.status) await this.orderInventory.transition(order.id, organization.id, updateOrderDto.status, queryRunner.manager);
       
       // If order with COD payment status is being delivered, automatically mark it as PAID
       if (updateOrderDto.status === OrderStatus.DELIVERED && 
@@ -286,6 +288,7 @@ export class OrdersService {
 
       // Handle order items update if provided
       if (updateOrderDto.items && updateOrderDto.items.length > 0) {
+        if (order.stockCommittedAt) throw new BadRequestException('Order items cannot be changed after inventory is committed');
         // Validate products exist
         for (const item of updateOrderDto.items) {
           const product = await this.productRepository.findOne({
@@ -342,7 +345,7 @@ export class OrdersService {
       }
 
       // Update the order record (exclude items field)
-      const { items, ...orderUpdateData } = updateOrderDto;
+      const { items, status, ...orderUpdateData } = updateOrderDto;
       if (Object.keys(orderUpdateData).length > 0) {
         await queryRunner.manager.update(Order, id, orderUpdateData);
       }
@@ -367,6 +370,7 @@ export class OrdersService {
     await queryRunner.startTransaction();
 
     try {
+      await this.orderInventory.restoreById(order.id, organization.id, queryRunner.manager);
       // Delete associated invoice if exists
       const invoice = await this.invoiceRepository.findOne({
         where: { orderId: order.id }
@@ -378,21 +382,6 @@ export class OrdersService {
 
       // Delete associated deliveries (if any) to avoid FK constraint violations
       await queryRunner.manager.delete(Delivery, { orderId: order.id });
-
-      // Restore inventory for each order item
-      if (order.items) {
-        for (const item of order.items) {
-          if (order.status === OrderStatus.CONFIRMED || order.status === OrderStatus.PROCESSING || 
-              order.status === OrderStatus.SHIPPED || order.status === OrderStatus.DELIVERED) {
-            await queryRunner.manager.increment(
-              Product,
-              { id: item.productId },
-              'stock',
-              item.quantity
-            );
-          }
-        }
-      }
 
       // Delete order items first
       await queryRunner.manager.delete(OrderItem, { orderId: order.id });
@@ -430,44 +419,6 @@ export class OrdersService {
     };
 
     return stats;
-  }
-
-  private async validateAndUpdateStock(order: Order): Promise<void> {
-    if (!order.items) {
-      const fullOrder = await this.orderRepository.findOne({
-        where: { id: order.id },
-        relations: ['items'],
-      });
-      
-      if (!fullOrder) {
-        throw new NotFoundException('Order not found');
-      }
-      
-      order.items = fullOrder.items;
-    }
-
-    for (const item of order.items) {
-      const product = await this.productRepository.findOne({
-        where: { id: item.productId },
-      });
-
-      if (!product) {
-        throw new NotFoundException(`Product with ID ${item.productId} not found`);
-      }
-
-      if (product.stock < item.quantity) {
-        throw new BadRequestException(
-          `Insufficient stock for product ${product.name}. Available: ${product.stock}, Required: ${item.quantity}`
-        );
-      }
-
-      // Update product stock
-      await this.productRepository.decrement(
-        { id: item.productId },
-        'stock',
-        item.quantity
-      );
-    }
   }
 
   /**

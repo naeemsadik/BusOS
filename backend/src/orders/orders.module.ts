@@ -5,6 +5,7 @@ import { OrdersService } from './orders.service';
 import { Order, OrderItem, Product, Customer, Invoice, InvoiceItem, Delivery } from '../entities';
 import { InvoicesModule } from '../invoices/invoices.module';
 import { DeliveryModule } from '../delivery/delivery.module';
+import { OrderInventoryService } from './order-inventory.service';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { DeliveryModule } from '../delivery/delivery.module';
     DeliveryModule,
   ],
   controllers: [OrdersController],
-  providers: [OrdersService],
-  exports: [OrdersService],
+  providers: [OrdersService, OrderInventoryService],
+  exports: [OrdersService, OrderInventoryService],
 })
 export class OrdersModule {}

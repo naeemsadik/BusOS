@@ -1,6 +1,6 @@
 import { Column, CreateDateColumn, Entity, Index, JoinColumn, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { Organization } from './organization.entity';
-import { StorefrontDocument } from '../storefront/storefront.types';
+import { StorefrontDocument, StorefrontOrderSettings, StorefrontSeoSettings, StorefrontThemeTokens } from '../storefront/storefront.types';
 
 export enum StorefrontPublicationStatus {
   DRAFT = 'draft',
@@ -20,9 +20,9 @@ export class StorefrontSite {
   @Column({ type: 'enum', enum: StorefrontPublicationStatus, default: StorefrontPublicationStatus.DRAFT }) status: StorefrontPublicationStatus;
   @Column({ type: 'jsonb', default: () => `'["en"]'::jsonb` }) enabledLocales: Array<'en' | 'bn'>;
   @Column({ type: 'varchar', length: 2, default: 'en' }) defaultLocale: 'en' | 'bn';
-  @Column({ type: 'jsonb', default: () => "'{}'" }) themeTokens: Record<string, unknown>;
-  @Column({ type: 'jsonb', default: () => "'{}'" }) seoSettings: Record<string, unknown>;
-  @Column({ type: 'jsonb', default: () => "'{}'" }) orderSettings: Record<string, unknown>;
+  @Column({ type: 'jsonb', default: () => "'{}'" }) themeTokens: StorefrontThemeTokens;
+  @Column({ type: 'jsonb', default: () => "'{}'" }) seoSettings: StorefrontSeoSettings;
+  @Column({ type: 'jsonb', default: () => "'{}'" }) orderSettings: StorefrontOrderSettings;
   @Column({ type: 'jsonb' }) draftDocument: StorefrontDocument;
   @Column({ type: 'jsonb', nullable: true }) publishedDocument: StorefrontDocument | null;
   @Column({ type: 'int', default: 1 }) draftVersion: number;

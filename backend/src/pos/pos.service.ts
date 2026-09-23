@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
-import { Order, OrderItem, Product, Customer, OrderStatus, PaymentStatus, PaymentMethod } from '../entities';
+import { Repository, Between, DataSource } from 'typeorm';
+import { Order, OrderItem, Product, Customer, OrderStatus, PaymentStatus, PaymentMethod, OrderSource } from '../entities';
 import { Organization } from '../entities/organization.entity';
 import { CreateSaleDto, PosStatsDto } from './dto';
 import { randomUUID } from 'crypto';
+import { OrderInventoryService } from '../orders/order-inventory.service';
 
 @Injectable()
 export class PosService {
@@ -17,37 +18,14 @@ export class PosService {
     private productRepository: Repository<Product>,
     @InjectRepository(Customer)
     private customerRepository: Repository<Customer>,
+    private dataSource: DataSource,
+    private orderInventory: OrderInventoryService,
   ) {}
 
   async createSale(createSaleDto: CreateSaleDto, organization: Organization): Promise<Order> {
     const orderNumber = await this.generateUniqueOrderNumber(organization.id);
-
-    // Validate products and stock
-    for (const item of createSaleDto.items) {
-      const product = await this.productRepository.findOne({
-        where: { 
-          id: item.productId,
-          organization: { id: organization.id }
-        },
-        relations: ['organization'],
-      });
-
-      if (!product) {
-        throw new NotFoundException(`Product with ID ${item.productId} not found`);
-      }
-
-      if (product.stock < item.quantity) {
-        throw new BadRequestException(
-          `Insufficient stock for product ${product.name}. Available: ${product.stock}, Required: ${item.quantity}`
-        );
-      }
-    }
-
-    // Determine payment status based on paid amount
     let paymentStatus = PaymentStatus.PENDING;
     const paidAmount = createSaleDto.paidAmount || 0;
-    
-    // Handle COD payment method
     if (createSaleDto.paymentMethod === PaymentMethod.COD) {
       paymentStatus = PaymentStatus.COD;
     } else if (paidAmount >= createSaleDto.total) {
@@ -55,65 +33,34 @@ export class PosService {
     } else if (paidAmount > 0) {
       paymentStatus = PaymentStatus.PARTIAL;
     }
-
-    // Create order
-    const order = this.orderRepository.create({
-      orderNumber,
-      customerId: createSaleDto.customerId,
-      customerName: createSaleDto.customerName,
-      customerEmail: createSaleDto.customerEmail,
-      customerPhone: createSaleDto.customerPhone,
-      subtotal: createSaleDto.subtotal,
-      taxAmount: createSaleDto.taxAmount || 0,
-      discountAmount: createSaleDto.discountAmount || 0,
-      shippingAmount: createSaleDto.shippingAmount || 0,
-      total: createSaleDto.total,
-      paidAmount: paidAmount,
-      status: OrderStatus.CONFIRMED,
-      paymentStatus: paymentStatus,
-      paymentMethod: createSaleDto.paymentMethod,
-      notes: createSaleDto.notes,
-      paperflyOrderNumber: createSaleDto.paperflyOrderNumber,
-      trackingNumber: createSaleDto.paperflyOrderNumber, // Use Paperfly order number as tracking number for Paperfly orders
-      courierService: createSaleDto.paperflyOrderNumber ? 'paperfly' : undefined,
-      organizationId: organization.id,
+    const savedOrder = await this.dataSource.transaction(async manager => {
+      const productIds = [...new Set(createSaleDto.items.map(item => item.productId))].sort();
+      if (productIds.length !== createSaleDto.items.length) throw new BadRequestException('Duplicate product lines are not allowed');
+      const products = await manager.getRepository(Product).createQueryBuilder('product').setLock('pessimistic_write')
+        .where('product.id IN (:...productIds)', { productIds }).andWhere('product.organizationId = :organizationId', { organizationId: organization.id }).orderBy('product.id', 'ASC').getMany();
+      if (products.length !== productIds.length) throw new NotFoundException('One or more products were not found');
+      const byId = new Map(products.map(product => [product.id, product]));
+      const order = await manager.save(manager.create(Order, {
+        orderNumber, customerId: createSaleDto.customerId, customerName: createSaleDto.customerName,
+        customerEmail: createSaleDto.customerEmail, customerPhone: createSaleDto.customerPhone,
+        subtotal: createSaleDto.subtotal, taxAmount: createSaleDto.taxAmount || 0,
+        discountAmount: createSaleDto.discountAmount || 0, shippingAmount: createSaleDto.shippingAmount || 0,
+        total: createSaleDto.total, paidAmount, status: OrderStatus.CONFIRMED, source: OrderSource.POS,
+        paymentStatus, paymentMethod: createSaleDto.paymentMethod, notes: createSaleDto.notes,
+        paperflyOrderNumber: createSaleDto.paperflyOrderNumber, trackingNumber: createSaleDto.paperflyOrderNumber,
+        courierService: createSaleDto.paperflyOrderNumber ? 'paperfly' : undefined, organizationId: organization.id,
+      }));
+      await manager.save(createSaleDto.items.map(item => {
+        const product = byId.get(item.productId)!;
+        return manager.create(OrderItem, {
+          orderId: order.id, productId: product.id, productName: item.productName, productSku: item.productSku || undefined,
+          unitPrice: item.unitPrice, unitCost: item.unitCost && item.unitCost > 0 ? item.unitCost : product.cost || 0,
+          quantity: item.quantity, discountAmount: item.discountAmount || 0, total: item.total,
+        });
+      }));
+      await this.orderInventory.commitById(order.id, organization.id, manager);
+      return order;
     });
-
-    const savedOrder = await this.orderRepository.save(order);
-
-    // Create order items and update stock
-    for (const item of createSaleDto.items) {
-      const product = await this.productRepository.findOne({
-        where: { id: item.productId },
-      });
-
-      // Debug logging for unitCost issues
-      const receivedUnitCost = item.unitCost;
-      const productCost = product?.cost;
-      // Use product cost if unitCost is 0, null, undefined, or invalid
-      const finalUnitCost = (receivedUnitCost && receivedUnitCost > 0) ? receivedUnitCost : (productCost || 0);
-
-      const orderItem = this.orderItemRepository.create({
-        order: { id: savedOrder.id },
-        productId: item.productId,
-        productName: item.productName,
-        productSku: item.productSku || undefined,
-        unitPrice: item.unitPrice,
-        unitCost: finalUnitCost,
-        quantity: item.quantity,
-        discountAmount: item.discountAmount || 0,
-        total: item.total,
-      });
-
-      await this.orderItemRepository.save(orderItem);
-
-      // Update product stock
-      await this.productRepository.decrement(
-        { id: item.productId },
-        'stock',
-        item.quantity
-      );
-    }
 
     // Update customer stats if customer exists
     if (createSaleDto.customerId) {
