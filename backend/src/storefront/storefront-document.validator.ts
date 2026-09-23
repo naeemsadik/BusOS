@@ -18,7 +18,7 @@ export function validateSeo(value: unknown): asserts value is StorefrontSeoSetti
   if (!record(value) || !localized(value.title, 70, true) || !localized(value.description, 160) || !safeUrl(value.socialImageUrl)) throw new BadRequestException('SEO settings are invalid');
 }
 export function validateOrderSettings(value: unknown): asserts value is StorefrontOrderSettings {
-  if (!record(value) || !Number.isFinite(value.deliveryFee) || value.deliveryFee < 0 || value.deliveryFee > 999999.99 || !bounded(value.phone, 40, true) || (value.email !== undefined && !bounded(value.email, 255)) || (value.address !== undefined && !localized(value.address, 500))) throw new BadRequestException('Order settings are invalid');
+  if (!record(value) || !Number.isFinite(value.deliveryFee) || value.deliveryFee < 0 || value.deliveryFee > 999999.99 || !bounded(value.phone, 40) || (value.email !== undefined && !bounded(value.email, 255)) || (value.address !== undefined && !localized(value.address, 500))) throw new BadRequestException('Order settings are invalid');
 }
 export function validateStorefrontDocument(value: unknown): asserts value is StorefrontDocument {
   if (!record(value) || value.version !== 1 || !record(value.header) || !record(value.footer) || typeof value.header.showCatalog !== 'boolean' || typeof value.header.showCart !== 'boolean' || !safeUrl(value.header.logoUrl) || !localized(value.footer.text, 300, true) || typeof value.footer.showContact !== 'boolean' || !Array.isArray(value.sections) || value.sections.length > 30) throw new BadRequestException('Storefront document structure is invalid');

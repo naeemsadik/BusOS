@@ -53,7 +53,7 @@ export async function middleware(request: NextRequest) {
   // Get the path of the request
   const path = request.nextUrl.pathname;
   const host = (request.headers.get('host') || '').split(':')[0].toLowerCase();
-  const rootDomain = (process.env.STOREFRONT_ROOT_DOMAIN || '').toLowerCase();
+  const rootDomain = (process.env.STOREFRONT_ROOT_DOMAIN || (process.env.NODE_ENV === 'production' ? '' : 'localhost')).toLowerCase();
   if (rootDomain && host.endsWith(`.${rootDomain}`)) {
     const slug = host.slice(0, -(rootDomain.length + 1));
     if (/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$/.test(slug) && !['www', 'admin', 'api', 'app'].includes(slug) && !path.startsWith('/backend-api') && !path.startsWith('/_next') && !path.startsWith('/api/')) {

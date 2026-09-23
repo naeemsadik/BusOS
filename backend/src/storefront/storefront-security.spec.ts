@@ -12,6 +12,7 @@ describe('storefront contract security', () => {
     expect(() => validateTheme({ primary: '#0f766e', accent: '#f59e0b', font: 'system', radius: '8px' })).not.toThrow();
     expect(() => validateSeo({ title: { en: 'Store' }, description: { en: 'Description' }, socialImageUrl: '/image.png' })).not.toThrow();
     expect(() => validateOrderSettings({ deliveryFee: 75.25, phone: '01700000000', address: { en: 'Dhaka' } })).not.toThrow();
+    expect(() => validateOrderSettings({ deliveryFee: 0, phone: '' })).not.toThrow();
   });
 
   it.each([

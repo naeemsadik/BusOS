@@ -11,7 +11,11 @@ async function load(params: { slug: string; path?: string[] }, search: Record<st
   if (!allowed.has(page) || (page === 'product' && !path[1]) || path.length > (page === 'product' ? 2 : 1)) notFound()
   const site = await storefrontServer.site(params.slug); if (locale === 'bn' && !site.enabledLocales.includes('bn')) notFound()
   let products: any[] = []; let product
-  if (page === 'home') products = (await storefrontServer.products(params.slug, '?limit=24')).data
+  if (page === 'home') {
+    const productSection = site.document?.sections.find(section => section.visible && section.type === 'productGrid')
+    const query = new URLSearchParams({ limit: String(productSection?.content.productLimit || 24), sort: productSection?.content.productSort || 'newest' })
+    products = (await storefrontServer.products(params.slug, `?${query}`)).data
+  }
   if (page === 'catalog') { const query = new URLSearchParams({ page: String(search.page || 1), limit: '24', ...(typeof search.category === 'string' ? { category: search.category } : {}), ...(typeof search.search === 'string' ? { search: search.search } : {}) }); products = (await storefrontServer.products(params.slug, `?${query}`)).data }
   if (page === 'product') product = await storefrontServer.product(params.slug, path[1])
   return { site, products, product, locale, path }

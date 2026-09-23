@@ -11,6 +11,6 @@ export interface StorefrontSite {
   draftDocument?: StorefrontDocument; document?: StorefrontDocument; draftVersion?: number; publishedVersion?: number; publishedAt?: string
 }
 export interface StorefrontAsset { id: string; url: string; mimeType: string; size: number; width: number; height: number; sortOrder: number; altTextEn: string; altTextBn?: string }
-export interface StorefrontProduct { id: string; slug: string; name: string; nameBn?: string; description?: string; descriptionBn?: string; longDescription?: string; longDescriptionBn?: string; category: string; price: number; image?: string; imageAltText?: string; imageAltTextBn?: string; available: boolean }
+export interface StorefrontProduct { id: string; slug: string; name: string; nameBn?: string; description?: string; descriptionBn?: string; longDescription?: string; longDescriptionBn?: string; category: string; price: number; image?: string; imageAltText?: string; imageAltTextBn?: string; available: boolean; createdAt?: string }
 export interface StorefrontReceipt { id: string; orderNumber: string; status: string; subtotal: number; taxAmount: number; shippingAmount: number; total: number; locale: Locale; confirmationToken?: string }
 export const localize = (value: LocalizedText | undefined, locale: Locale) => value?.[locale] || value?.en || ''

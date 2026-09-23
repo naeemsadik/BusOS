@@ -245,7 +245,7 @@ export class StorefrontService {
     return { slug: site.slug, name: site.organization.name, logo: site.organization.logo, enabledLocales: site.enabledLocales, defaultLocale: site.defaultLocale, themeTokens: site.themeTokens, seoSettings: site.seoSettings, orderSettings: site.orderSettings, document: site.publishedDocument, publishedVersion: site.publishedVersion, publishedAt: site.publishedAt };
   }
   private publicProduct(product: Product) {
-    return { id: product.id, slug: product.slug || product.id, name: product.name, nameBn: product.nameBn, description: product.description, descriptionBn: product.descriptionBn, longDescription: product.longDescription, longDescriptionBn: product.longDescriptionBn, category: product.category, price: Number(product.price), image: product.image, imageAltText: product.imageAltText, imageAltTextBn: product.imageAltTextBn, available: !product.trackStock || product.allowBackorder || product.stock > 0 };
+    return { id: product.id, slug: product.slug || product.id, name: product.name, nameBn: product.nameBn, description: product.description, descriptionBn: product.descriptionBn, longDescription: product.longDescription, longDescriptionBn: product.longDescriptionBn, category: product.category, price: Number(product.price), image: product.image, imageAltText: product.imageAltText, imageAltTextBn: product.imageAltTextBn, available: !product.trackStock || product.allowBackorder || product.stock > 0, createdAt: product.createdAt };
   }
   private money(value: number) { return Math.round((value + Number.EPSILON) * 100) / 100; }
   private confirmationToken(orderId: string, key: string) {

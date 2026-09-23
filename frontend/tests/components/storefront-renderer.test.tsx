@@ -34,4 +34,19 @@ describe('StorefrontRenderer', () => {
     expect(screen.getByRole('img', { name: 'চায়ের প্যাকেট' })).toBeVisible()
     expect(screen.getByText('স্টক নেই')).toBeVisible()
   })
+
+  it('automatically sorts and limits products using the product grid settings', () => {
+    const document = {
+      ...storefrontDocument,
+      sections: storefrontDocument.sections.map(section => section.type === 'productGrid'
+        ? { ...section, content: { ...section.content, productLimit: 1, productSort: 'priceAsc' as const } }
+        : section),
+    }
+    render(<StorefrontRenderer site={site} document={document} locale="en" products={[
+      { id: 'expensive', slug: 'expensive', name: 'Expensive', category: 'Test', price: 200, available: true },
+      { id: 'affordable', slug: 'affordable', name: 'Affordable', category: 'Test', price: 50, available: true },
+    ]} />)
+    expect(screen.getByText('Affordable')).toBeVisible()
+    expect(screen.queryByText('Expensive')).not.toBeInTheDocument()
+  })
 })

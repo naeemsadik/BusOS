@@ -2,9 +2,14 @@ import { api } from './api';
 
 export interface Product {
   id: string;
+  slug?: string;
   name: string;
+  nameBn?: string;
   sku?: string | null;
   description?: string;
+  descriptionBn?: string;
+  longDescription?: string;
+  longDescriptionBn?: string;
   category: string;
   subcategory?: string;
   brand?: string;
@@ -18,6 +23,9 @@ export interface Product {
   weightUnit?: string;
   barcode?: string;
   image?: string;
+  imageAltText?: string;
+  imageAltTextBn?: string;
+  storefrontVisible?: boolean;
   status: 'active' | 'inactive' | 'discontinued';
   trackStock: boolean;
   allowBackorder: boolean;
