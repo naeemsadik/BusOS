@@ -23,6 +23,8 @@ import {
   SubscriptionStatus,
   SubscriptionPlan,
   InvitationStatus,
+  Employee,
+  EmploymentStatus,
 } from '../entities';
 import {
   RegisterDto,
@@ -50,6 +52,8 @@ export class AuthService {
     private subscriptionPlanRepository: Repository<SubscriptionPlanEntity>,
     @InjectRepository(Invitation)
     private invitationRepository: Repository<Invitation>,
+    @InjectRepository(Employee)
+    private employeeRepository: Repository<Employee>,
     private jwtService: JwtService,
     private configService: ConfigService,
     private emailService: EmailService,
@@ -430,6 +434,7 @@ export class AuthService {
     // Initialize default permissions if the user is staff
     if (user.role === UserRole.STAFF) {
       await this.permissionsService.initializeDefaultPermissions(user.id);
+      await this.syncEmployeeProfile(user, invitation.organization.id);
     }
 
     // Send welcome email
@@ -440,6 +445,35 @@ export class AuthService {
     }
 
     return { message: 'Invitation accepted successfully' };
+  }
+
+  private async syncEmployeeProfile(user: User, organizationId: string): Promise<void> {
+    const linked = await this.employeeRepository.findOne({ where: { linkedUserId: user.id } });
+    if (linked) return;
+
+    const byEmail = await this.employeeRepository
+      .createQueryBuilder('employee')
+      .where('employee.organizationId = :organizationId', { organizationId })
+      .andWhere('employee.linkedUserId IS NULL')
+      .andWhere('lower(employee.email) = lower(:email)', { email: user.email })
+      .getOne();
+
+    if (byEmail) {
+      byEmail.linkedUserId = user.id;
+      await this.employeeRepository.save(byEmail);
+      return;
+    }
+
+    await this.employeeRepository.save(this.employeeRepository.create({
+      organizationId,
+      linkedUserId: user.id,
+      employeeCode: `EMP-${user.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      joiningDate: new Date().toISOString().slice(0, 10),
+      status: EmploymentStatus.ACTIVE,
+    }));
   }
 
   async getProfile(userId: string) {
