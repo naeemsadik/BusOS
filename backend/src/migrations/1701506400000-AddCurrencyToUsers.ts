@@ -2,8 +2,7 @@ import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
 export class AddCurrencyToUsers1701506400000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Add currency columns to users table
-    await queryRunner.addColumns('users', [
+    const columns = [
       new TableColumn({
         name: 'currencyCode',
         type: 'varchar',
@@ -22,15 +21,19 @@ export class AddCurrencyToUsers1701506400000 implements MigrationInterface {
         length: '100',
         default: "'Bangladeshi Taka'",
       }),
-    ]);
+    ];
+    for (const column of columns) {
+      if (!(await queryRunner.hasColumn('users', column.name))) {
+        await queryRunner.addColumn('users', column);
+      }
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Remove currency columns from users table
-    await queryRunner.dropColumns('users', [
-      'currencyCode',
-      'currencySymbol',
-      'currencyName',
-    ]);
+    for (const column of ['currencyCode', 'currencySymbol', 'currencyName']) {
+      if (await queryRunner.hasColumn('users', column)) {
+        await queryRunner.dropColumn('users', column);
+      }
+    }
   }
 }
