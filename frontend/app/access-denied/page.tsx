@@ -59,7 +59,8 @@ export default function AccessDeniedPage() {
           [PermissionModuleType.PAYMENTS]: '/payments',
           [PermissionModuleType.DASHBOARD]: '/dashboard',
           [PermissionModuleType.INVOICES]: '/invoices',
-          [PermissionModuleType.WEBSITE]: '/website',
+      [PermissionModuleType.WEBSITE]: '/website',
+      [PermissionModuleType.HRM]: '/hrm',
         };
 
         // Check each module in priority order
