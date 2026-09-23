@@ -86,6 +86,7 @@ import {
         } : false,
         entities: [User, Organization, Subscription, SubscriptionPlanEntity, Invitation, Admin, Product, Category, StockMovement, Customer, Order, OrderItem, Invoice, InvoiceItem, Expense, Delivery, Supplier, BkashPayment, SslcommerzPayment, SmsBalance, SmsPackage, SmsLog, SmsSettings, UserPermission, StorefrontSite, StorefrontAsset, Attendance, Department, Designation, Employee, EmployeeCompensation, Holiday, HrmAuditLog, HrmSettings, PayrollItem, PayrollRun],
         migrations: [__dirname + '/migrations/*{.ts,.js}'],
+        migrationsTransactionMode: 'each',
         migrationsRun: configService.get('TYPEORM_MIGRATIONS_RUN') === 'true',
         synchronize: false,
         logging: false,
