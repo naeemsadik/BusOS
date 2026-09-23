@@ -14,11 +14,13 @@ import {
   AttendanceQueryDto,
   BulkAttendanceDto,
   CreateHolidayDto,
+  CreateCompensationDto,
   EmployeeQueryDto,
   LinkEmployeeAccountDto,
   RecordLeaveDto,
   UpsertAttendanceDto,
   UpdateHolidayDto,
+  UpdateCompensationDto,
   UpdateDepartmentDto,
   UpdateDesignationDto,
   UpdateEmployeeDto,
@@ -154,6 +156,23 @@ export class HrmController {
   @Post('holidays/:id/delete') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'delete')
   deleteHoliday(@Request() req, @Param('id', ParseUUIDPipe) id: string) {
     return this.hrm.deleteHoliday(req.user.organizationId, id);
+  }
+
+  @Get('employees/:id/compensations') @UseGuards(RolesGuard) @Roles(UserRole.OWNER)
+  compensations(@Request() req, @Param('id', ParseUUIDPipe) employeeId: string) {
+    return this.hrm.getCompensations(req.user.organizationId, employeeId);
+  }
+
+  @Post('employees/:id/compensations') @UseGuards(RolesGuard) @Roles(UserRole.OWNER)
+  createCompensation(
+    @Request() req, @Param('id', ParseUUIDPipe) employeeId: string, @Body() dto: CreateCompensationDto,
+  ) {
+    return this.hrm.createCompensation(req.user.organizationId, employeeId, req.user.id, dto);
+  }
+
+  @Patch('compensations/:id') @UseGuards(RolesGuard) @Roles(UserRole.OWNER)
+  updateCompensation(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCompensationDto) {
+    return this.hrm.updateCompensation(req.user.organizationId, id, dto);
   }
 
   @Get('attendance/me')

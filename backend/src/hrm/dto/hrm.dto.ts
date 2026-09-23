@@ -153,3 +153,16 @@ export class UpdateHolidayDto {
   @IsOptional() @IsString() @Length(1, 150) name?: string;
   @IsOptional() @IsBoolean() isPaid?: boolean;
 }
+
+export class CreateCompensationDto {
+  @IsEnum(PayType) payType: PayType;
+  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Type(() => Number) baseRate: number;
+  @IsDateString() effectiveFrom: string;
+  @IsOptional() @IsString() @MaxLength(1000) notes?: string;
+}
+
+export class UpdateCompensationDto {
+  @IsOptional() @IsEnum(PayType) payType?: PayType;
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Type(() => Number) baseRate?: number;
+  @IsOptional() @IsString() @MaxLength(1000) notes?: string;
+}

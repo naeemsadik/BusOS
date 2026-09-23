@@ -4,7 +4,8 @@ import { DataSource, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import {
   Attendance, AttendanceSource, AttendanceStatus, Department, Designation, Employee,
-  EmploymentStatus, Holiday, HrmSettings, User, UserRole,
+  EmployeeCompensation, EmploymentStatus, Holiday, HrmSettings, PayrollItem, PayrollStatus,
+  User, UserRole,
 } from '../entities';
 import {
   CreateDepartmentDto,
@@ -13,11 +14,13 @@ import {
   AttendanceQueryDto,
   BulkAttendanceDto,
   CreateHolidayDto,
+  CreateCompensationDto,
   EmployeeQueryDto,
   LinkEmployeeAccountDto,
   RecordLeaveDto,
   UpsertAttendanceDto,
   UpdateHolidayDto,
+  UpdateCompensationDto,
   UpdateDepartmentDto,
   UpdateDesignationDto,
   UpdateEmployeeDto,
@@ -34,6 +37,8 @@ export class HrmService {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Attendance) private readonly attendanceRepo: Repository<Attendance>,
     @InjectRepository(Holiday) private readonly holidayRepo: Repository<Holiday>,
+    @InjectRepository(EmployeeCompensation) private readonly compensationRepo: Repository<EmployeeCompensation>,
+    @InjectRepository(PayrollItem) private readonly payrollItemRepo: Repository<PayrollItem>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -289,6 +294,52 @@ export class HrmService {
   async deleteHoliday(organizationId: string, id: string): Promise<void> {
     const result = await this.holidayRepo.delete({ id, organizationId });
     if (!result.affected) throw new NotFoundException('Holiday not found');
+  }
+
+  async getCompensations(organizationId: string, employeeId: string): Promise<EmployeeCompensation[]> {
+    await this.getEmployee(organizationId, employeeId);
+    return this.compensationRepo.find({ where: { organizationId, employeeId }, order: { effectiveFrom: 'DESC' } });
+  }
+
+  async createCompensation(
+    organizationId: string, employeeId: string, actorUserId: string, dto: CreateCompensationDto,
+  ): Promise<EmployeeCompensation> {
+    const employee = await this.getEmployee(organizationId, employeeId);
+    if (dto.effectiveFrom < employee.joiningDate) throw new BadRequestException('Compensation cannot start before joining date');
+    const settings = await this.getSettings(organizationId);
+    if (!settings.isConfigured) throw new BadRequestException('Configure HRM settings before adding compensation');
+    return this.dataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(EmployeeCompensation);
+      const revisions = await repo.find({ where: { organizationId, employeeId }, order: { effectiveFrom: 'ASC' } });
+      if (revisions.some((item) => item.effectiveFrom === dto.effectiveFrom)) {
+        throw new ConflictException('A compensation revision already starts on this date');
+      }
+      const previous = [...revisions].reverse().find((item) => item.effectiveFrom < dto.effectiveFrom);
+      const next = revisions.find((item) => item.effectiveFrom > dto.effectiveFrom);
+      if (previous) {
+        previous.effectiveTo = this.addDays(dto.effectiveFrom, -1);
+        await repo.save(previous);
+      }
+      return repo.save(repo.create({
+        ...dto, organizationId, employeeId, createdById: actorUserId,
+        currencyCode: settings.currencyCode, effectiveTo: next ? this.addDays(next.effectiveFrom, -1) : null,
+      }));
+    });
+  }
+
+  async updateCompensation(
+    organizationId: string, id: string, dto: UpdateCompensationDto,
+  ): Promise<EmployeeCompensation> {
+    const compensation = await this.compensationRepo.findOne({ where: { id, organizationId } });
+    if (!compensation) throw new NotFoundException('Compensation revision not found');
+    const usedByFinalized = await this.payrollItemRepo.createQueryBuilder('item')
+      .innerJoin('item.run', 'run')
+      .where('item.compensationId = :id', { id })
+      .andWhere('run.status IN (:...statuses)', { statuses: [PayrollStatus.FINALIZED, PayrollStatus.PAID] })
+      .getCount();
+    if (usedByFinalized) throw new ConflictException('Compensation used by finalized payroll cannot be edited');
+    Object.assign(compensation, dto);
+    return this.compensationRepo.save(compensation);
   }
 
   async getMyEmployee(organizationId: string, userId: string): Promise<Employee> {
