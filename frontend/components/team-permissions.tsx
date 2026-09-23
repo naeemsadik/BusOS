@@ -64,6 +64,10 @@ const moduleInfo = {
     name: 'Dashboard', 
     description: 'Access to the main dashboard and analytics.' 
   },
+  [PermissionModuleType.WEBSITE]: {
+    name: 'Website',
+    description: 'Manage and publish the public storefront.'
+  },
 };
 
 export default function TeamPermissions(_props: TeamPermissionsProps) {

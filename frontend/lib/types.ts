@@ -68,6 +68,7 @@ export enum PermissionModuleType {
   PAYMENTS = 'payments',
   SUPPLIERS = 'suppliers',
   DASHBOARD = 'dashboard',
+  WEBSITE = 'website',
 }
 
 export interface UserPermission {

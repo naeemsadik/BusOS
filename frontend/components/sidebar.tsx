@@ -40,7 +40,7 @@ const groups = [
     { label: "delivery", href: "/delivery", icon: Truck, module: PermissionModuleType.DELIVERY },
   ]},
   { label: "growth", items: [
-    { label: "website", href: "/website", icon: Globe2, module: PermissionModuleType.SETTINGS },
+    { label: "website", href: "/website", icon: Globe2, module: PermissionModuleType.WEBSITE },
     { label: "contentStudio", href: "/social-content", icon: Megaphone, module: PermissionModuleType.SETTINGS },
     { label: "sms", href: "/sms", icon: MessageSquare, module: PermissionModuleType.PAYMENTS },
   ]},
