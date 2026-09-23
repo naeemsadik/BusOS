@@ -52,7 +52,17 @@ import {
   SmsSettings,
   UserPermission,
   StorefrontSite,
-  StorefrontAsset
+  StorefrontAsset,
+  Attendance,
+  Department,
+  Designation,
+  Employee,
+  EmployeeCompensation,
+  Holiday,
+  HrmAuditLog,
+  HrmSettings,
+  PayrollItem,
+  PayrollRun,
 } from './entities';
 
 @Module({
@@ -73,7 +83,7 @@ import {
         ssl: configService.get('DATABASE_SSL') === 'true' ? {
           rejectUnauthorized: configService.get('DATABASE_SSL_REJECT_UNAUTHORIZED') !== 'false',
         } : false,
-        entities: [User, Organization, Subscription, SubscriptionPlanEntity, Invitation, Admin, Product, Category, StockMovement, Customer, Order, OrderItem, Invoice, InvoiceItem, Expense, Delivery, Supplier, BkashPayment, SslcommerzPayment, SmsBalance, SmsPackage, SmsLog, SmsSettings, UserPermission, StorefrontSite, StorefrontAsset],
+        entities: [User, Organization, Subscription, SubscriptionPlanEntity, Invitation, Admin, Product, Category, StockMovement, Customer, Order, OrderItem, Invoice, InvoiceItem, Expense, Delivery, Supplier, BkashPayment, SslcommerzPayment, SmsBalance, SmsPackage, SmsLog, SmsSettings, UserPermission, StorefrontSite, StorefrontAsset, Attendance, Department, Designation, Employee, EmployeeCompensation, Holiday, HrmAuditLog, HrmSettings, PayrollItem, PayrollRun],
         migrations: [__dirname + '/migrations/*{.ts,.js}'],
         migrationsRun: configService.get('TYPEORM_MIGRATIONS_RUN') === 'true',
         synchronize: false,
