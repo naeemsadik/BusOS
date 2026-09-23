@@ -26,6 +26,7 @@ import { CurrencyModule } from './currency/currency.module';
 import { VoiceModule } from './voice/voice.module';
 import { SocialContentModule } from './social-content/social-content.module';
 import { StorefrontModule } from './storefront/storefront.module';
+import { HrmModule } from './hrm/hrm.module';
 import {
   User, 
   Organization, 
@@ -114,6 +115,7 @@ import {
     VoiceModule,
     SocialContentModule,
     StorefrontModule,
+    HrmModule,
   ],
   controllers: [AppController],
   providers: [AppService],
