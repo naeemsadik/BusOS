@@ -8,6 +8,7 @@ import {
   IsEmail,
   IsEnum,
   IsInt,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -131,4 +132,24 @@ export class BulkAttendanceDto {
   @IsDateString() endDate: string;
   @IsEnum(AttendanceStatus) status: AttendanceStatus;
   @IsOptional() @IsString() @MaxLength(1000) notes?: string;
+}
+
+export class RecordLeaveDto {
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(100) @IsUUID('4', { each: true }) employeeIds: string[];
+  @IsDateString() startDate: string;
+  @IsDateString() endDate: string;
+  @IsIn([AttendanceStatus.PAID_LEAVE, AttendanceStatus.UNPAID_LEAVE]) status: AttendanceStatus;
+  @IsOptional() @IsString() @MaxLength(1000) notes?: string;
+}
+
+export class CreateHolidayDto {
+  @IsDateString() holidayDate: string;
+  @IsString() @Length(1, 150) name: string;
+  @IsBoolean() isPaid: boolean;
+}
+
+export class UpdateHolidayDto {
+  @IsOptional() @IsDateString() holidayDate?: string;
+  @IsOptional() @IsString() @Length(1, 150) name?: string;
+  @IsOptional() @IsBoolean() isPaid?: boolean;
 }

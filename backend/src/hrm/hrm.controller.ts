@@ -13,9 +13,12 @@ import {
   CreateEmployeeDto,
   AttendanceQueryDto,
   BulkAttendanceDto,
+  CreateHolidayDto,
   EmployeeQueryDto,
   LinkEmployeeAccountDto,
+  RecordLeaveDto,
   UpsertAttendanceDto,
+  UpdateHolidayDto,
   UpdateDepartmentDto,
   UpdateDesignationDto,
   UpdateEmployeeDto,
@@ -126,6 +129,31 @@ export class HrmController {
   @Post('attendance/bulk') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'edit')
   bulkAttendance(@Request() req, @Body() dto: BulkAttendanceDto) {
     return this.hrm.bulkAttendance(req.user.organizationId, req.user.id, dto);
+  }
+
+  @Post('attendance/leave') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'edit')
+  recordLeave(@Request() req, @Body() dto: RecordLeaveDto) {
+    return this.hrm.recordLeave(req.user.organizationId, req.user.id, dto);
+  }
+
+  @Get('holidays') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'view')
+  holidays(@Request() req, @Query('startDate') startDate?: string, @Query('endDate') endDate?: string) {
+    return this.hrm.getHolidays(req.user.organizationId, startDate, endDate);
+  }
+
+  @Post('holidays') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'create')
+  createHoliday(@Request() req, @Body() dto: CreateHolidayDto) {
+    return this.hrm.createHoliday(req.user.organizationId, dto);
+  }
+
+  @Patch('holidays/:id') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'edit')
+  updateHoliday(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateHolidayDto) {
+    return this.hrm.updateHoliday(req.user.organizationId, id, dto);
+  }
+
+  @Post('holidays/:id/delete') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'delete')
+  deleteHoliday(@Request() req, @Param('id', ParseUUIDPipe) id: string) {
+    return this.hrm.deleteHoliday(req.user.organizationId, id);
   }
 
   @Get('attendance/me')

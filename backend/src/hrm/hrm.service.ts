@@ -4,7 +4,7 @@ import { DataSource, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import {
   Attendance, AttendanceSource, AttendanceStatus, Department, Designation, Employee,
-  EmploymentStatus, HrmSettings, User, UserRole,
+  EmploymentStatus, Holiday, HrmSettings, User, UserRole,
 } from '../entities';
 import {
   CreateDepartmentDto,
@@ -12,9 +12,12 @@ import {
   CreateEmployeeDto,
   AttendanceQueryDto,
   BulkAttendanceDto,
+  CreateHolidayDto,
   EmployeeQueryDto,
   LinkEmployeeAccountDto,
+  RecordLeaveDto,
   UpsertAttendanceDto,
+  UpdateHolidayDto,
   UpdateDepartmentDto,
   UpdateDesignationDto,
   UpdateEmployeeDto,
@@ -30,6 +33,7 @@ export class HrmService {
     @InjectRepository(Employee) private readonly employeeRepo: Repository<Employee>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Attendance) private readonly attendanceRepo: Repository<Attendance>,
+    @InjectRepository(Holiday) private readonly holidayRepo: Repository<Holiday>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -250,6 +254,41 @@ export class HrmService {
       }
       return { saved };
     });
+  }
+
+  recordLeave(organizationId: string, actorUserId: string, dto: RecordLeaveDto) {
+    return this.bulkAttendance(organizationId, actorUserId, dto);
+  }
+
+  getHolidays(organizationId: string, startDate?: string, endDate?: string): Promise<Holiday[]> {
+    const qb = this.holidayRepo.createQueryBuilder('holiday')
+      .where('holiday.organizationId = :organizationId', { organizationId });
+    if (startDate) qb.andWhere('holiday.holidayDate >= :startDate', { startDate });
+    if (endDate) qb.andWhere('holiday.holidayDate <= :endDate', { endDate });
+    return qb.orderBy('holiday.holidayDate', 'ASC').getMany();
+  }
+
+  async createHoliday(organizationId: string, dto: CreateHolidayDto): Promise<Holiday> {
+    if (await this.holidayRepo.findOne({ where: { organizationId, holidayDate: dto.holidayDate } })) {
+      throw new ConflictException('A holiday already exists on this date');
+    }
+    return this.holidayRepo.save(this.holidayRepo.create({ ...dto, name: dto.name.trim(), organizationId }));
+  }
+
+  async updateHoliday(organizationId: string, id: string, dto: UpdateHolidayDto): Promise<Holiday> {
+    const holiday = await this.holidayRepo.findOne({ where: { id, organizationId } });
+    if (!holiday) throw new NotFoundException('Holiday not found');
+    if (dto.holidayDate && dto.holidayDate !== holiday.holidayDate) {
+      const duplicate = await this.holidayRepo.findOne({ where: { organizationId, holidayDate: dto.holidayDate } });
+      if (duplicate) throw new ConflictException('A holiday already exists on this date');
+    }
+    Object.assign(holiday, dto, dto.name ? { name: dto.name.trim() } : {});
+    return this.holidayRepo.save(holiday);
+  }
+
+  async deleteHoliday(organizationId: string, id: string): Promise<void> {
+    const result = await this.holidayRepo.delete({ id, organizationId });
+    if (!result.affected) throw new NotFoundException('Holiday not found');
   }
 
   async getMyEmployee(organizationId: string, userId: string): Promise<Employee> {
