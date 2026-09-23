@@ -1,7 +1,7 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Organization, StorefrontAsset, StorefrontSite } from '../entities';
+import { DataSource, Repository } from 'typeorm';
+import { Organization, StorefrontAsset, StorefrontPublicationStatus, StorefrontSite } from '../entities';
 import { AssetMetadataDto, CreateStorefrontDto, SaveStorefrontDraftDto, UpdateAssetDto } from './storefront.dto';
 import { StorefrontAssetStorage } from './storefront-asset.storage';
 import { validateOrderSettings, validateSeo, validateStorefrontDocument, validateTheme } from './storefront-document.validator';
@@ -11,10 +11,12 @@ const RESERVED_SLUGS = new Set(['admin', 'api', 'app', 'assets', 'cdn', 'mail', 
 
 @Injectable()
 export class StorefrontService {
+  private readonly logger = new Logger(StorefrontService.name);
   constructor(
     @InjectRepository(StorefrontSite) private readonly sites: Repository<StorefrontSite>,
     @InjectRepository(StorefrontAsset) private readonly assets: Repository<StorefrontAsset>,
     private readonly assetStorage: StorefrontAssetStorage,
+    private readonly dataSource: DataSource,
   ) {}
 
   private normalizeSlug(slug: string) { return slug.trim().toLowerCase(); }
@@ -61,6 +63,22 @@ export class StorefrontService {
     }
     return this.requireCmsSite(organizationId);
   }
+  async publish(organizationId: string) {
+    const published = await this.dataSource.transaction(async manager => {
+      const site = await manager.getRepository(StorefrontSite).createQueryBuilder('site').setLock('pessimistic_write')
+        .where('site.organizationId = :organizationId', { organizationId }).getOne();
+      if (!site) throw new NotFoundException('Set up your storefront first');
+      validateTheme(site.themeTokens); validateSeo(site.seoSettings); validateOrderSettings(site.orderSettings); validateStorefrontDocument(site.draftDocument);
+      await this.assertOwnedAssetReferences(site, manager.getRepository(StorefrontAsset));
+      site.publishedDocument = JSON.parse(JSON.stringify(site.draftDocument));
+      site.publishedVersion = site.draftVersion;
+      site.status = StorefrontPublicationStatus.PUBLISHED;
+      site.publishedAt = new Date();
+      return manager.save(site);
+    });
+    await this.invalidatePublishedCache(published.slug);
+    return published;
+  }
   listAssets(organizationId: string) {
     return this.assets.find({ where: { organizationId }, order: { sortOrder: 'ASC', createdAt: 'DESC' } });
   }
@@ -104,6 +122,27 @@ export class StorefrontService {
     const asset = await this.assets.findOne({ where: { id, organizationId } });
     if (!asset) throw new NotFoundException('Asset not found');
     return asset;
+  }
+  private async assertOwnedAssetReferences(site: StorefrontSite, repository: Repository<StorefrontAsset>) {
+    const matches = JSON.stringify(site.draftDocument).matchAll(/\/storefront\/assets\/public\/([0-9a-f-]{36})/gi);
+    const ids = [...new Set(Array.from(matches, match => match[1]))];
+    if (!ids.length) return;
+    const count = await repository.createQueryBuilder('asset').where('asset.organizationId = :organizationId', { organizationId: site.organizationId }).andWhere('asset.id IN (:...ids)', { ids }).getCount();
+    if (count !== ids.length) throw new BadRequestException('The draft references an image owned by another organization or an image that no longer exists');
+  }
+  private async invalidatePublishedCache(slug: string) {
+    const frontend = process.env.FRONTEND_1_URL;
+    const secret = process.env.STOREFRONT_REVALIDATE_SECRET;
+    if (!frontend || !secret) return;
+    try {
+      const response = await fetch(`${frontend.replace(/\/$/, '')}/api/storefront/revalidate`, {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-revalidate-secret': secret },
+        body: JSON.stringify({ slug }), signal: AbortSignal.timeout(2500),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    } catch (error) {
+      this.logger.warn(`Storefront ${slug} was published but cache invalidation will rely on its TTL: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
   private async requireCmsSite(organizationId: string) {
     const site = await this.getCmsSite(organizationId);

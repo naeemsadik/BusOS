@@ -23,6 +23,9 @@ export class StorefrontController {
   @UseGuards(JwtAuthGuard, PermissionsGuard) @RequiredPermission(PermissionModuleType.WEBSITE, 'edit')
   @Put('cms/draft') save(@Body() dto: SaveStorefrontDraftDto, @Req() req: any) { return this.service.saveDraft(dto, req.user.organization.id); }
 
+  @UseGuards(JwtAuthGuard, PermissionsGuard) @RequiredPermission(PermissionModuleType.WEBSITE, 'edit')
+  @Post('cms/publish') publish(@Req() req: any) { return this.service.publish(req.user.organization.id); }
+
   @UseGuards(JwtAuthGuard, PermissionsGuard) @RequiredPermission(PermissionModuleType.WEBSITE, 'view')
   @Get('cms/assets') assets(@Req() req: any) { return this.service.listAssets(req.user.organization.id); }
 
