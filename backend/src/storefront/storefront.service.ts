@@ -1,8 +1,9 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Organization, StorefrontSite } from '../entities';
-import { CreateStorefrontDto, SaveStorefrontDraftDto } from './storefront.dto';
+import { Organization, StorefrontAsset, StorefrontSite } from '../entities';
+import { AssetMetadataDto, CreateStorefrontDto, SaveStorefrontDraftDto, UpdateAssetDto } from './storefront.dto';
+import { StorefrontAssetStorage } from './storefront-asset.storage';
 import { validateOrderSettings, validateSeo, validateStorefrontDocument, validateTheme } from './storefront-document.validator';
 import { DEFAULT_SEO, DEFAULT_STOREFRONT_DOCUMENT, DEFAULT_THEME } from './storefront.types';
 
@@ -10,7 +11,11 @@ const RESERVED_SLUGS = new Set(['admin', 'api', 'app', 'assets', 'cdn', 'mail', 
 
 @Injectable()
 export class StorefrontService {
-  constructor(@InjectRepository(StorefrontSite) private readonly sites: Repository<StorefrontSite>) {}
+  constructor(
+    @InjectRepository(StorefrontSite) private readonly sites: Repository<StorefrontSite>,
+    @InjectRepository(StorefrontAsset) private readonly assets: Repository<StorefrontAsset>,
+    private readonly assetStorage: StorefrontAssetStorage,
+  ) {}
 
   private normalizeSlug(slug: string) { return slug.trim().toLowerCase(); }
   private assertSlug(slug: string) {
@@ -55,6 +60,50 @@ export class StorefrontService {
       throw new ConflictException({ message: 'The draft changed in another session', currentVersion: current.draftVersion });
     }
     return this.requireCmsSite(organizationId);
+  }
+  listAssets(organizationId: string) {
+    return this.assets.find({ where: { organizationId }, order: { sortOrder: 'ASC', createdAt: 'DESC' } });
+  }
+  async addAsset(organizationId: string, file: { buffer: Buffer; size: number }, metadata: AssetMetadataDto) {
+    await this.requireCmsSite(organizationId);
+    if (!file?.buffer || file.buffer.length < 1 || file.buffer.length > 5 * 1024 * 1024) throw new BadRequestException('Images must be between 1 byte and 5 MB');
+    const info = this.assetStorage.inspect(file.buffer);
+    const storageKey = await this.assetStorage.write(organizationId, file.buffer, info.extension);
+    const asset = this.assets.create({
+      organizationId, storageKey, url: '', mimeType: info.mimeType, size: file.buffer.length,
+      width: info.width, height: info.height, altTextEn: metadata.altTextEn.trim(),
+      altTextBn: metadata.altTextBn?.trim() || null,
+    });
+    try {
+      asset.url = `/storefront/assets/public/${asset.id || ''}`;
+      const saved = await this.assets.save(asset);
+      if (!saved.url.endsWith(saved.id)) saved.url = `/storefront/assets/public/${saved.id}`;
+      return this.assets.save(saved);
+    } catch (error) {
+      await this.assetStorage.remove(storageKey); throw error;
+    }
+  }
+  async updateAsset(id: string, organizationId: string, dto: UpdateAssetDto) {
+    const asset = await this.requireAsset(id, organizationId);
+    asset.altTextEn = dto.altTextEn.trim(); asset.altTextBn = dto.altTextBn?.trim() || null; asset.sortOrder = dto.sortOrder;
+    return this.assets.save(asset);
+  }
+  async deleteAsset(id: string, organizationId: string) {
+    const [asset, site] = await Promise.all([this.requireAsset(id, organizationId), this.requireCmsSite(organizationId)]);
+    const serialized = JSON.stringify([site.draftDocument, site.publishedDocument]);
+    if (serialized.includes(asset.url) || serialized.includes(asset.storageKey)) throw new ConflictException('Remove this image from the draft and published site before deleting it');
+    await this.assets.remove(asset); await this.assetStorage.remove(asset.storageKey);
+    return { deleted: true };
+  }
+  async getPublicAsset(id: string) {
+    const asset = await this.assets.findOne({ where: { id } });
+    if (!asset) throw new NotFoundException('Asset not found');
+    return { asset, buffer: await this.assetStorage.read(asset.storageKey) };
+  }
+  private async requireAsset(id: string, organizationId: string) {
+    const asset = await this.assets.findOne({ where: { id, organizationId } });
+    if (!asset) throw new NotFoundException('Asset not found');
+    return asset;
   }
   private async requireCmsSite(organizationId: string) {
     const site = await this.getCmsSite(organizationId);
