@@ -1,3 +1,5 @@
+"use client";
+
 import { PermissionModuleType, UserRole } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { useEffect, ReactNode, useState } from 'react';

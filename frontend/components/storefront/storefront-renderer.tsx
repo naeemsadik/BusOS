@@ -1,0 +1,30 @@
+import Link from 'next/link'
+import type { CSSProperties } from 'react'
+import { localize, type Locale, type StorefrontDocument, type StorefrontProduct, type StorefrontSite } from '@/lib/storefront-types'
+
+const localeBase = (locale: Locale, preview: boolean) => preview ? '#' : locale === 'bn' ? '/bn' : ''
+const hrefFor = (base: string, path: string) => base === '#' ? '#' : `${base}${path}` || '/'
+
+export function StorefrontRenderer({ site, document, products, locale, preview = false }: { site: StorefrontSite; document: StorefrontDocument; products: StorefrontProduct[]; locale: Locale; preview?: boolean }) {
+  const base = localeBase(locale, preview)
+  const style = { '--store-primary': site.themeTokens.primary, '--store-accent': site.themeTokens.accent, '--store-radius': site.themeTokens.radius, fontFamily: site.themeTokens.font === 'system' ? 'system-ui' : 'inherit' } as CSSProperties
+  return <div style={style} className="min-h-full bg-white text-slate-950">
+    <header className="flex items-center justify-between border-b px-5 py-4"><Link href={hrefFor(base, '')} className="text-xl font-bold" style={{ color: 'var(--store-primary)' }}>{site.logo && <img src={site.logo} alt="" className="mr-2 inline h-8 w-8 object-contain" />}{site.name || site.slug}</Link><nav aria-label="Store navigation" className="flex gap-4 text-sm">{document.header.showCatalog && <Link href={hrefFor(base, '/catalog')}>{locale === 'bn' ? 'পণ্য' : 'Catalog'}</Link>}{document.header.showCart && <Link href={hrefFor(base, '/cart')}>{locale === 'bn' ? 'কার্ট' : 'Cart'}</Link>}{site.enabledLocales.includes('bn') && <Link href={preview ? '#' : locale === 'en' ? '/bn' : '/'} hrefLang={locale === 'en' ? 'bn' : 'en'}>{locale === 'en' ? 'বাংলা' : 'English'}</Link>}</nav></header>
+    <main>{document.sections.filter(section => section.visible).map(section => {
+      const title = localize(section.content.title, locale); const body = localize(section.content.body, locale)
+      if (section.type === 'announcement') return <section key={section.id} className="px-4 py-2 text-center text-sm text-white" style={{ background: 'var(--store-primary)' }}>{title || body}</section>
+      if (section.type === 'hero') return <section key={section.id} className="grid min-h-72 place-content-center bg-slate-50 px-6 py-16 text-center">{section.content.imageUrl && <img src={section.content.imageUrl} alt={localize(section.content.imageAlt, locale)} className="mx-auto mb-6 max-h-72 rounded-xl object-cover" />}<h1 className="text-4xl font-black sm:text-6xl">{title}</h1><p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">{body}</p><Link href={hrefFor(base, section.content.ctaHref || '/catalog')} className="mx-auto mt-7 px-5 py-3 font-semibold text-white" style={{ background: 'var(--store-primary)', borderRadius: 'var(--store-radius)' }}>{localize(section.content.ctaLabel, locale) || (locale === 'bn' ? 'কেনাকাটা করুন' : 'Shop now')}</Link></section>
+      if (section.type === 'categoryNavigation') return <section key={section.id} className="mx-auto max-w-7xl px-6 py-10"><h2 className="mb-5 text-3xl font-bold">{title}</h2><div className="flex flex-wrap gap-3">{(section.content.categories || []).map(category => <Link key={category} href={hrefFor(base, `/catalog?category=${encodeURIComponent(category)}`)} className="rounded-full border px-4 py-2">{category}</Link>)}</div></section>
+      if (section.type === 'productGrid') return <ProductGrid key={section.id} title={title} products={products.slice(0, section.content.productLimit || 8)} base={base} locale={locale} />
+      if (section.type === 'promotionalBanner') return <section key={section.id} className="m-6 px-6 py-10 text-center" style={{ background: 'var(--store-accent)', borderRadius: 'var(--store-radius)' }}><h2 className="text-3xl font-bold">{title}</h2><p className="mt-2">{body}</p></section>
+      if (section.type === 'imageText') return <section key={section.id} className={`mx-auto grid max-w-6xl gap-8 px-6 py-12 md:grid-cols-2 ${section.content.imagePosition === 'right' ? 'direction-rtl' : ''}`}>{section.content.imageUrl && <img className="h-72 w-full object-cover" src={section.content.imageUrl} alt={localize(section.content.imageAlt, locale)} />}<div className="self-center"><h2 className="text-3xl font-bold">{title}</h2><p className="mt-3 whitespace-pre-line text-slate-600">{body}</p></div></section>
+      if (section.type === 'contactHours') return <section key={section.id} className="mx-auto max-w-6xl px-6 py-12"><h2 className="text-2xl font-bold">{title}</h2><p className="mt-2 whitespace-pre-line text-slate-600">{body}</p><p className="mt-3 whitespace-pre-line">{localize(section.content.hours, locale)}</p></section>
+      return null
+    })}</main>
+    <footer className="border-t px-6 py-8 text-center text-sm text-slate-500">{localize(document.footer.text, locale)}</footer>
+  </div>
+}
+
+export function ProductGrid({ title, products, base, locale }: { title?: string; products: StorefrontProduct[]; base: string; locale: Locale }) {
+  return <section className="mx-auto max-w-7xl px-6 py-12">{title && <h2 className="mb-6 text-3xl font-bold">{title}</h2>}<div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">{products.map(product => <Link key={product.id} href={hrefFor(base, `/product/${encodeURIComponent(product.slug)}`)} className="overflow-hidden border bg-white shadow-sm" style={{ borderRadius: 'var(--store-radius)' }}><div className="aspect-square bg-slate-100">{product.image && <img src={product.image} alt={(locale === 'bn' && product.imageAltTextBn) || product.imageAltText || product.name} className="h-full w-full object-cover" />}</div><div className="p-4"><p className="font-semibold">{(locale === 'bn' && product.nameBn) || product.name}</p><p className="mt-1 font-bold" style={{ color: 'var(--store-primary)' }}>৳{product.price.toFixed(2)}</p>{!product.available && <p className="mt-1 text-xs text-red-700">{locale === 'bn' ? 'স্টক নেই' : 'Unavailable'}</p>}</div></Link>)}</div></section>
+}

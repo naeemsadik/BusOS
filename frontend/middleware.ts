@@ -19,6 +19,7 @@ const ROUTE_PERMISSIONS: Record<string, { module: PermissionModuleType, action: 
   '/sms': { module: PermissionModuleType.PAYMENTS, action: 'view' },
   '/subscription': { module: PermissionModuleType.PAYMENTS, action: 'view' },
   '/payments': { module: PermissionModuleType.PAYMENTS, action: 'view' },
+  '/website': { module: PermissionModuleType.WEBSITE, action: 'view' },
 };
 
 // Module priority order for redirecting to first permitted page (most common/important modules first)
@@ -34,6 +35,7 @@ const MODULE_PRIORITY: PermissionModuleType[] = [
   PermissionModuleType.DELIVERY,
   PermissionModuleType.SETTINGS,
   PermissionModuleType.PAYMENTS,
+  PermissionModuleType.WEBSITE,
 ];
 
 interface DecodedToken {
@@ -50,6 +52,17 @@ interface DecodedToken {
 export async function middleware(request: NextRequest) {
   // Get the path of the request
   const path = request.nextUrl.pathname;
+  const host = (request.headers.get('host') || '').split(':')[0].toLowerCase();
+  const rootDomain = (process.env.STOREFRONT_ROOT_DOMAIN || '').toLowerCase();
+  if (rootDomain && host.endsWith(`.${rootDomain}`)) {
+    const slug = host.slice(0, -(rootDomain.length + 1));
+    if (/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$/.test(slug) && !['www', 'admin', 'api', 'app'].includes(slug) && !path.startsWith('/backend-api') && !path.startsWith('/_next') && !path.startsWith('/api/')) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/store/${slug}${path === '/' ? '' : path}`;
+      return NextResponse.rewrite(url);
+    }
+    return new NextResponse('Storefront not found', { status: 404 })
+  }
   
   // Special handling for root path
   if (path === '/') {
@@ -64,6 +77,7 @@ export async function middleware(request: NextRequest) {
       path.startsWith('/api') || 
       path.startsWith('/backend-api') ||
       path.startsWith('/_next') ||
+      path.startsWith('/store/') ||
       path === '/access-denied') {
     return NextResponse.next();
   }

@@ -192,9 +192,9 @@ export class StorefrontService {
       altTextBn: metadata.altTextBn?.trim() || null,
     });
     try {
-      asset.url = `/storefront/assets/public/${asset.id || ''}`;
+      asset.url = `/backend-api/storefront/assets/public/${asset.id || ''}`;
       const saved = await this.assets.save(asset);
-      if (!saved.url.endsWith(saved.id)) saved.url = `/storefront/assets/public/${saved.id}`;
+      if (!saved.url.endsWith(saved.id)) saved.url = `/backend-api/storefront/assets/public/${saved.id}`;
       return this.assets.save(saved);
     } catch (error) {
       await this.assetStorage.remove(storageKey); throw error;
@@ -223,7 +223,7 @@ export class StorefrontService {
     return asset;
   }
   private async assertOwnedAssetReferences(site: StorefrontSite, repository: Repository<StorefrontAsset>) {
-    const matches = JSON.stringify(site.draftDocument).matchAll(/\/storefront\/assets\/public\/([0-9a-f-]{36})/gi);
+    const matches = JSON.stringify(site.draftDocument).matchAll(/\/(?:backend-api\/)?storefront\/assets\/public\/([0-9a-f-]{36})/gi);
     const ids = [...new Set(Array.from(matches, match => match[1]))];
     if (!ids.length) return;
     const count = await repository.createQueryBuilder('asset').where('asset.organizationId = :organizationId', { organizationId: site.organizationId }).andWhere('asset.id IN (:...ids)', { ids }).getCount();
