@@ -11,8 +11,11 @@ import {
   CreateDepartmentDto,
   CreateDesignationDto,
   CreateEmployeeDto,
+  AttendanceQueryDto,
+  BulkAttendanceDto,
   EmployeeQueryDto,
   LinkEmployeeAccountDto,
+  UpsertAttendanceDto,
   UpdateDepartmentDto,
   UpdateDesignationDto,
   UpdateEmployeeDto,
@@ -103,5 +106,25 @@ export class HrmController {
   @Patch('employees/:id/account-link') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'edit')
   linkEmployee(@Request() req, @Param('id', ParseUUIDPipe) id: string, @Body() dto: LinkEmployeeAccountDto) {
     return this.hrm.linkEmployeeAccount(req.user.organizationId, id, dto);
+  }
+
+  @Get('attendance') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'view')
+  attendance(@Request() req, @Query() query: AttendanceQueryDto) {
+    return this.hrm.getAttendance(req.user.organizationId, query);
+  }
+
+  @Get('attendance/summary') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'view')
+  attendanceSummary(@Request() req, @Query('startDate') startDate: string, @Query('endDate') endDate: string) {
+    return this.hrm.getAttendanceSummary(req.user.organizationId, startDate, endDate);
+  }
+
+  @Post('attendance/manual') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'edit')
+  upsertAttendance(@Request() req, @Body() dto: UpsertAttendanceDto) {
+    return this.hrm.upsertAttendance(req.user.organizationId, req.user.id, dto);
+  }
+
+  @Post('attendance/bulk') @UseGuards(PermissionsGuard) @RequiredPermission(PermissionModuleType.HRM, 'edit')
+  bulkAttendance(@Request() req, @Body() dto: BulkAttendanceDto) {
+    return this.hrm.bulkAttendance(req.user.organizationId, req.user.id, dto);
   }
 }

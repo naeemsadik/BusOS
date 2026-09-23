@@ -106,3 +106,29 @@ export class EmployeeQueryDto {
 export class LinkEmployeeAccountDto {
   @IsOptional() @IsUUID() userId?: string | null;
 }
+
+export class AttendanceQueryDto {
+  @IsOptional() @IsUUID() employeeId?: string;
+  @IsOptional() @IsDateString() startDate?: string;
+  @IsOptional() @IsDateString() endDate?: string;
+  @IsOptional() @IsEnum(AttendanceStatus) status?: AttendanceStatus;
+  @IsOptional() @IsInt() @Min(1) @Type(() => Number) page = 1;
+  @IsOptional() @IsInt() @Min(1) @Max(100) @Type(() => Number) limit = 31;
+}
+
+export class UpsertAttendanceDto {
+  @IsUUID() employeeId: string;
+  @IsDateString() workDate: string;
+  @IsEnum(AttendanceStatus) status: AttendanceStatus;
+  @IsOptional() @IsDateString() checkInAt?: string;
+  @IsOptional() @IsDateString() checkOutAt?: string;
+  @IsOptional() @IsString() @MaxLength(1000) notes?: string;
+}
+
+export class BulkAttendanceDto {
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(100) @IsUUID('4', { each: true }) employeeIds: string[];
+  @IsDateString() startDate: string;
+  @IsDateString() endDate: string;
+  @IsEnum(AttendanceStatus) status: AttendanceStatus;
+  @IsOptional() @IsString() @MaxLength(1000) notes?: string;
+}

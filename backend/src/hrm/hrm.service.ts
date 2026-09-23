@@ -1,14 +1,20 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { Department, Designation, Employee, EmploymentStatus, HrmSettings, User, UserRole } from '../entities';
+import {
+  Attendance, AttendanceSource, AttendanceStatus, Department, Designation, Employee,
+  EmploymentStatus, HrmSettings, User, UserRole,
+} from '../entities';
 import {
   CreateDepartmentDto,
   CreateDesignationDto,
   CreateEmployeeDto,
+  AttendanceQueryDto,
+  BulkAttendanceDto,
   EmployeeQueryDto,
   LinkEmployeeAccountDto,
+  UpsertAttendanceDto,
   UpdateDepartmentDto,
   UpdateDesignationDto,
   UpdateEmployeeDto,
@@ -23,6 +29,8 @@ export class HrmService {
     @InjectRepository(Designation) private readonly designationRepo: Repository<Designation>,
     @InjectRepository(Employee) private readonly employeeRepo: Repository<Employee>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(Attendance) private readonly attendanceRepo: Repository<Attendance>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async getSettings(organizationId: string): Promise<HrmSettings> {
@@ -172,6 +180,119 @@ export class HrmService {
       where: { organizationId }, select: { linkedUserId: true },
     })).map((employee) => employee.linkedUserId).filter(Boolean));
     return users.filter((user) => !linked.has(user.id));
+  }
+
+  async getAttendance(organizationId: string, query: AttendanceQueryDto) {
+    const qb = this.attendanceRepo.createQueryBuilder('attendance')
+      .leftJoinAndSelect('attendance.employee', 'employee')
+      .where('attendance.organizationId = :organizationId', { organizationId });
+    if (query.employeeId) qb.andWhere('attendance.employeeId = :employeeId', { employeeId: query.employeeId });
+    if (query.startDate) qb.andWhere('attendance.workDate >= :startDate', { startDate: query.startDate });
+    if (query.endDate) qb.andWhere('attendance.workDate <= :endDate', { endDate: query.endDate });
+    if (query.status) qb.andWhere('attendance.status = :status', { status: query.status });
+    const [records, total] = await qb.orderBy('attendance.workDate', 'DESC')
+      .addOrderBy('employee.employeeCode', 'ASC')
+      .skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
+    return { records, total, page: query.page, totalPages: Math.ceil(total / query.limit) };
+  }
+
+  async getAttendanceSummary(organizationId: string, startDate: string, endDate: string) {
+    const rows = await this.attendanceRepo.createQueryBuilder('attendance')
+      .select('attendance.status', 'status').addSelect('COUNT(*)', 'count')
+      .where('attendance.organizationId = :organizationId', { organizationId })
+      .andWhere('attendance.workDate BETWEEN :startDate AND :endDate', { startDate, endDate })
+      .groupBy('attendance.status').getRawMany<{ status: AttendanceStatus; count: string }>();
+    return Object.values(AttendanceStatus).reduce((summary, status) => {
+      summary[status] = Number(rows.find((row) => row.status === status)?.count || 0);
+      return summary;
+    }, {} as Record<AttendanceStatus, number>);
+  }
+
+  async upsertAttendance(organizationId: string, actorUserId: string, dto: UpsertAttendanceDto): Promise<Attendance> {
+    const employee = await this.getEmployee(organizationId, dto.employeeId);
+    return this.dataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(Attendance);
+      let attendance = await repo.findOne({ where: { organizationId, employeeId: employee.id, workDate: dto.workDate } });
+      const schedule = await this.getScheduleSnapshot(employee, dto.workDate);
+      if (!attendance) attendance = repo.create({ organizationId, employeeId: employee.id, workDate: dto.workDate });
+      Object.assign(attendance, dto, schedule, {
+        source: AttendanceSource.MANUAL,
+        checkInAt: dto.checkInAt ? new Date(dto.checkInAt) : null,
+        checkOutAt: dto.checkOutAt ? new Date(dto.checkOutAt) : null,
+        createdById: attendance.createdById || actorUserId,
+        updatedById: actorUserId,
+      });
+      this.calculateAttendanceMinutes(attendance, employee.graceMinutesOverride ?? (await this.getSettings(organizationId)).graceMinutes);
+      return repo.save(attendance);
+    });
+  }
+
+  async bulkAttendance(organizationId: string, actorUserId: string, dto: BulkAttendanceDto) {
+    const dates = this.dateRange(dto.startDate, dto.endDate);
+    if (dates.length > 366) throw new BadRequestException('Attendance range cannot exceed 366 days');
+    const employees = await this.employeeRepo.createQueryBuilder('employee')
+      .where('employee.organizationId = :organizationId', { organizationId })
+      .andWhere('employee.id IN (:...ids)', { ids: dto.employeeIds }).getMany();
+    if (employees.length !== new Set(dto.employeeIds).size) throw new NotFoundException('One or more employees were not found');
+    return this.dataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(Attendance);
+      let saved = 0;
+      for (const employee of employees) for (const workDate of dates) {
+        let attendance = await repo.findOne({ where: { organizationId, employeeId: employee.id, workDate } });
+        if (!attendance) attendance = repo.create({ organizationId, employeeId: employee.id, workDate });
+        Object.assign(attendance, await this.getScheduleSnapshot(employee, workDate), {
+          status: dto.status, source: AttendanceSource.MANUAL, notes: dto.notes || null,
+          checkInAt: null, checkOutAt: null, workedMinutes: 0, lateMinutes: 0,
+          createdById: attendance.createdById || actorUserId, updatedById: actorUserId,
+        });
+        await repo.save(attendance);
+        saved += 1;
+      }
+      return { saved };
+    });
+  }
+
+  private async getScheduleSnapshot(employee: Employee, workDate: string) {
+    const settings = await this.getSettings(employee.organizationId);
+    const start = employee.workStartTimeOverride || settings.workStartTime;
+    const end = employee.workEndTimeOverride || settings.workEndTime;
+    const scheduledStartAt = this.zonedDateTimeToUtc(workDate, start, settings.timezone);
+    let endDate = workDate;
+    if (end <= start) endDate = this.addDays(workDate, 1);
+    return { scheduledStartAt, scheduledEndAt: this.zonedDateTimeToUtc(endDate, end, settings.timezone) };
+  }
+
+  private calculateAttendanceMinutes(attendance: Attendance, graceMinutes: number): void {
+    attendance.workedMinutes = attendance.checkInAt && attendance.checkOutAt
+      ? Math.max(0, Math.floor((attendance.checkOutAt.getTime() - attendance.checkInAt.getTime()) / 60000)) : 0;
+    attendance.lateMinutes = attendance.checkInAt && attendance.scheduledStartAt
+      ? Math.max(0, Math.floor((attendance.checkInAt.getTime() - attendance.scheduledStartAt.getTime()) / 60000) - graceMinutes) : 0;
+  }
+
+  private zonedDateTimeToUtc(date: string, time: string, timezone: string): Date {
+    const [year, month, day] = date.split('-').map(Number);
+    const [hour, minute, second = 0] = time.split(':').map(Number);
+    const target = Date.UTC(year, month - 1, day, hour, minute, second);
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    });
+    const parts = Object.fromEntries(formatter.formatToParts(new Date(target)).map((part) => [part.type, part.value]));
+    const represented = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
+    return new Date(target - (represented - target));
+  }
+
+  private dateRange(start: string, end: string): string[] {
+    if (end < start) throw new BadRequestException('End date must be on or after start date');
+    const dates: string[] = [];
+    for (let date = start; date <= end; date = this.addDays(date, 1)) dates.push(date);
+    return dates;
+  }
+
+  private addDays(date: string, days: number): string {
+    const value = new Date(`${date}T00:00:00Z`);
+    value.setUTCDate(value.getUTCDate() + days);
+    return value.toISOString().slice(0, 10);
   }
 
   private async validateEmployeeReferences(organizationId: string, departmentId?: string, designationId?: string) {
