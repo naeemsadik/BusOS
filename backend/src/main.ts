@@ -26,22 +26,29 @@ async function bootstrap() {
   app.useGlobalGuards(new FrontendAccessGuard(app.get(Reflector)));
 
   // CORS configuration for multiple frontends
-  const allowedOrigins = [
+  const configuredOrigins = [
     process.env.FRONTEND_1_URL || 'http://localhost:3000',
     process.env.FRONTEND_2_URL || 'http://localhost:3001',
     process.env.FRONTEND_3_URL || 'http://localhost:3002',
     process.env.FRONTEND_4_URL || 'http://localhost:3003',
   ].filter(Boolean); // Remove any undefined/null values
+  const developmentLoopbackOrigins = process.env.NODE_ENV === 'production'
+    ? []
+    : [3000, 3001, 3002, 3003].flatMap(port => [
+        `http://localhost:${port}`,
+        `http://127.0.0.1:${port}`,
+      ]);
+  const allowedOrigins = new Set([...configuredOrigins, ...developmentLoopbackOrigins]);
   const storefrontRootDomain = process.env.STOREFRONT_ROOT_DOMAIN?.toLowerCase();
 
-  console.log('Allowed CORS origins:', allowedOrigins);
+  console.log('Allowed CORS origins:', [...allowedOrigins]);
 
   app.enableCors({
     origin: function (origin, callback) {
       // Allow requests with no origin (like mobile apps, curl requests, Postman, payment gateways)
       if (!origin) return callback(null, true);
       
-      if (allowedOrigins.includes(origin)) {
+      if (allowedOrigins.has(origin)) {
         return callback(null, true);
       }
       if (storefrontRootDomain) {
