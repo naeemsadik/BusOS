@@ -8,7 +8,13 @@ export { Product, ProductStatus, StockStatus } from './product.entity';
 export { StockMovement, StockMovementType } from './stock-movement.entity';
 export { Category } from './category.entity';
 export { Customer, CustomerStatus } from './customer.entity';
-export { Order, OrderStatus, PaymentStatus, PaymentMethod, OrderSource } from './order.entity';
+export {
+  Order,
+  OrderStatus,
+  PaymentStatus,
+  PaymentMethod,
+  OrderSource,
+} from './order.entity';
 export { OrderItem } from './order-item.entity';
 export { Invoice, InvoiceStatus } from './invoice.entity';
 export { InvoiceItem } from './invoice-item.entity';
@@ -41,8 +47,25 @@ export {
   PayrollRun,
   PayrollStatus,
 } from './hrm.entity';
-export { StorefrontSite, StorefrontPublicationStatus } from './storefront-site.entity';
+export {
+  StorefrontSite,
+  StorefrontPublicationStatus,
+} from './storefront-site.entity';
 export { StorefrontAsset } from './storefront-asset.entity';
+export {
+  StorefrontPage,
+  StorefrontPageStatus,
+  StorefrontPageType,
+} from './storefront-page.entity';
+export {
+  StorefrontPageRevision,
+  StorefrontRevisionOrigin,
+} from './storefront-page-revision.entity';
+export { StorefrontPageRedirect } from './storefront-page-redirect.entity';
+export {
+  CmsAiSuggestion,
+  CmsAiSuggestionOutcome,
+} from './cms-ai-suggestion.entity';
 export {
   UserRole,
   UserStatus,
