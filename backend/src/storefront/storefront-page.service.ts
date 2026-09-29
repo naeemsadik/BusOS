@@ -7,6 +7,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import {
+  Product,
+  ProductStatus,
   StorefrontAsset,
   StorefrontPage,
   StorefrontPageRedirect,
@@ -204,18 +206,16 @@ export class StorefrontPageService {
         throw error;
       }
       if (oldSlug !== nextSlug && dto.createRedirect)
-        await manager
-          .getRepository(StorefrontPageRedirect)
-          .upsert(
-            {
-              organizationId,
-              siteId: page.siteId,
-              pageId: page.id,
-              fromSlug: oldSlug,
-              toSlug: nextSlug,
-            },
-            ['siteId', 'fromSlug'],
-          );
+        await manager.getRepository(StorefrontPageRedirect).upsert(
+          {
+            organizationId,
+            siteId: page.siteId,
+            pageId: page.id,
+            fromSlug: oldSlug,
+            toSlug: nextSlug,
+          },
+          ['siteId', 'fromSlug'],
+        );
       await this.trimRevisions(page.id, manager);
       return saved;
     });
@@ -285,6 +285,8 @@ export class StorefrontPageService {
           issues,
         });
       await this.assertOwnedAssets(page, manager);
+      await this.assertCatalogReferences(page, manager);
+      await this.assertInternalLinks(page, manager);
       await this.saveRevision(
         page,
         StorefrontRevisionOrigin.MANUAL,
@@ -426,6 +428,15 @@ export class StorefrontPageService {
     throw new NotFoundException('Page not found');
   }
 
+  async referencesAsset(organizationId: string, value: string) {
+    const pages = await this.pages.find({ where: { organizationId } });
+    return pages.some((page) =>
+      JSON.stringify([page.draftDocument, page.publishedDocument]).includes(
+        value,
+      ),
+    );
+  }
+
   private normalizeSlug(slug: string) {
     return slug.trim().toLowerCase();
   }
@@ -510,6 +521,74 @@ export class StorefrontPageService {
     if (count !== ids.length)
       throw new BadRequestException(
         'The page references an image that is missing or belongs to another organization',
+      );
+  }
+
+  private async assertCatalogReferences(
+    page: StorefrontPage,
+    manager: EntityManager,
+  ) {
+    const categories = [
+      ...new Set(
+        page.draftDocument.sections.flatMap((section) =>
+          section.type === 'categoryNavigation'
+            ? section.content.categories || []
+            : [],
+        ),
+      ),
+    ];
+    if (!categories.length) return;
+    const rows = await manager
+      .getRepository(Product)
+      .createQueryBuilder('product')
+      .select('DISTINCT product.category', 'category')
+      .where('product.organizationId = :organizationId', {
+        organizationId: page.organizationId,
+      })
+      .andWhere('product.status = :status', { status: ProductStatus.ACTIVE })
+      .andWhere('product.storefrontVisible = true')
+      .andWhere('product.category IN (:...categories)', { categories })
+      .getRawMany();
+    const available = new Set(rows.map((row) => row.category));
+    if (categories.some((category) => !available.has(category)))
+      throw new BadRequestException(
+        'Replace categories that are hidden, deleted, or unavailable before publishing',
+      );
+  }
+
+  private async assertInternalLinks(
+    page: StorefrontPage,
+    manager: EntityManager,
+  ) {
+    const builtIn = new Set([
+      '',
+      'home',
+      'catalog',
+      'product',
+      'cart',
+      'checkout',
+      'confirmation',
+    ]);
+    const slugs = page.draftDocument.sections
+      .map((section) => section.content.ctaHref)
+      .filter(
+        (href): href is string =>
+          !!href && href.startsWith('/') && !href.startsWith('//'),
+      )
+      .map((href) => href.split(/[?#]/)[0].split('/').filter(Boolean)[0] || '')
+      .filter((slug) => !builtIn.has(slug));
+    if (!slugs.length) return;
+    const unique = [...new Set(slugs)];
+    const count = await manager.getRepository(StorefrontPage).count({
+      where: {
+        siteId: page.siteId,
+        slug: In(unique),
+        status: StorefrontPageStatus.PUBLISHED,
+      },
+    });
+    if (count !== unique.length)
+      throw new BadRequestException(
+        'One or more internal links point to a page that is not published',
       );
   }
 }

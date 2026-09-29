@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { PublicStore } from '@/components/storefront/public-store'
 import { localize, type Locale } from '@/lib/storefront-types'
 import { StorefrontApiError, storefrontServer } from '@/lib/storefront-server'
@@ -8,21 +8,26 @@ type Props = { params: Promise<{ slug: string; path?: string[] }>; searchParams:
 const allowed = new Set(['home', 'catalog', 'product', 'cart', 'checkout', 'confirmation'])
 async function load(params: { slug: string; path?: string[] }, search: Record<string, string | string[] | undefined> = {}) {
   const raw = params.path || []; const locale: Locale = raw[0] === 'bn' ? 'bn' : 'en'; const path = locale === 'bn' ? raw.slice(1) : raw; const page = path[0] || 'home'
-  if (!allowed.has(page) || (page === 'product' && !path[1]) || path.length > (page === 'product' ? 2 : 1)) notFound()
   const site = await storefrontServer.site(params.slug); if (locale === 'bn' && !site.enabledLocales.includes('bn')) notFound()
-  let products: any[] = []; let product
-  if (page === 'home') {
-    const productSection = site.document?.sections.find(section => section.visible && section.type === 'productGrid')
+  let products: any[] = []; let product; let customPage
+  if (!allowed.has(page)) {
+    if (path.length !== 1) notFound()
+    customPage = await storefrontServer.page(params.slug, page)
+    if (customPage.redirectTo) redirect(`${locale === 'bn' ? '/bn' : ''}/${customPage.redirectTo}`)
+    if (!customPage.document || (locale === 'bn' && !customPage.enabledLocales?.includes('bn'))) notFound()
+  } else if ((page === 'product' && !path[1]) || path.length > (page === 'product' ? 2 : 1)) notFound()
+  if (page === 'home' || customPage) {
+    const productSection = (customPage?.document || site.document)?.sections.find(section => section.visible && section.type === 'productGrid')
     const query = new URLSearchParams({ limit: String(productSection?.content.productLimit || 24), sort: productSection?.content.productSort || 'newest' })
     products = (await storefrontServer.products(params.slug, `?${query}`)).data
   }
   if (page === 'catalog') { const query = new URLSearchParams({ page: String(search.page || 1), limit: '24', ...(typeof search.category === 'string' ? { category: search.category } : {}), ...(typeof search.search === 'string' ? { search: search.search } : {}) }); products = (await storefrontServer.products(params.slug, `?${query}`)).data }
   if (page === 'product') product = await storefrontServer.product(params.slug, path[1])
-  return { site, products, product, locale, path }
+  return { site, products, product, locale, path, customDocument: customPage?.document, customPage }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  try { const values = await params; const { site, locale, product } = await load(values); const root = process.env.NEXT_PUBLIC_STOREFRONT_ROOT_DOMAIN || 'localhost:3000'; const protocol = root.includes('localhost') ? 'http' : 'https'; const origin = `${protocol}://${site.slug}.${root}`; const suffix = locale === 'bn' ? '/bn' : ''; const title = product ? ((locale === 'bn' && product.nameBn) || product.name) : localize(site.seoSettings.title, locale) || site.name || site.slug; const description = product ? ((locale === 'bn' && product.descriptionBn) || product.description) : localize(site.seoSettings.description, locale); return { title, description, alternates: { canonical: `${origin}${suffix}`, languages: { en: origin, ...(site.enabledLocales.includes('bn') ? { bn: `${origin}/bn` } : {}) } }, openGraph: { title, description, images: site.seoSettings.socialImageUrl ? [site.seoSettings.socialImageUrl] : [] } } } catch { return { title: 'Store unavailable', robots: { index: false, follow: false } } }
+  try { const values = await params; const { site, locale, product, customPage, path } = await load(values); const root = process.env.NEXT_PUBLIC_STOREFRONT_ROOT_DOMAIN || 'localhost:3000'; const protocol = root.includes('localhost') ? 'http' : 'https'; const origin = `${protocol}://${site.slug}.${root}`; const suffix = locale === 'bn' ? '/bn' : ''; const seo = customPage?.seoSettings || site.seoSettings; const title = product ? ((locale === 'bn' && product.nameBn) || product.name) : localize(seo.title, locale) || customPage?.title || site.name || site.slug; const description = product ? ((locale === 'bn' && product.descriptionBn) || product.description) : localize(seo.description, locale); const pagePath = path[0] && path[0] !== 'home' ? `/${path[0]}` : ''; return { title, description, alternates: { canonical: `${origin}${suffix}${pagePath}`, languages: { en: `${origin}${pagePath}`, ...(site.enabledLocales.includes('bn') ? { bn: `${origin}/bn${pagePath}` } : {}) } }, openGraph: { title, description, images: seo.socialImageUrl ? [seo.socialImageUrl] : [] } } } catch { return { title: 'Store unavailable', robots: { index: false, follow: false } } }
 }
 
 export default async function StorePage({ params, searchParams }: Props) {

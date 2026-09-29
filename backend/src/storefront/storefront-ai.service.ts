@@ -486,6 +486,23 @@ export class StorefrontAiService {
       throw new BadRequestException(
         'A selected category is not represented by the authorized products',
       );
+    if (!ids.length && requestedCategories.length) {
+      const rows = await this.products
+        .createQueryBuilder('product')
+        .select('DISTINCT product.category', 'category')
+        .where('product.organizationId = :organizationId', { organizationId })
+        .andWhere('product.status = :status', { status: ProductStatus.ACTIVE })
+        .andWhere('product.storefrontVisible = true')
+        .andWhere('product.category IN (:...requestedCategories)', {
+          requestedCategories,
+        })
+        .getRawMany();
+      const authorized = new Set(rows.map((row) => row.category));
+      if (requestedCategories.some((category) => !authorized.has(category)))
+        throw new BadRequestException(
+          'One or more selected categories are unavailable or belong to another organization',
+        );
+    }
     const organization =
       dto.useOrganizationProfile === false
         ? null

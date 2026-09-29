@@ -1,5 +1,5 @@
 import { api } from './api'
-import type { StorefrontAsset, StorefrontDocument, StorefrontProduct, StorefrontReceipt, StorefrontSite } from './storefront-types'
+import type { Locale, SectionType, StorefrontAiSuggestion, StorefrontAsset, StorefrontDocument, StorefrontPage, StorefrontPageRevision, StorefrontPageType, StorefrontProduct, StorefrontReceipt, StorefrontReviewIssue, StorefrontSite } from './storefront-types'
 
 export const storefrontService = {
   async getCms(): Promise<StorefrontSite | null> { return (await api.get('/storefront/cms')).data },
@@ -9,11 +9,29 @@ export const storefrontService = {
     return (await api.put('/storefront/cms/draft', { expectedVersion: site.draftVersion, enabledLocales: site.enabledLocales, defaultLocale: site.defaultLocale, themeTokens: site.themeTokens, seoSettings: site.seoSettings, orderSettings: site.orderSettings, document })).data
   },
   async publish(): Promise<StorefrontSite> { return (await api.post('/storefront/cms/publish')).data },
+  async pages(): Promise<StorefrontPage[]> { return (await api.get('/storefront/cms/pages')).data },
+  async page(pageId: string): Promise<StorefrontPage> { return (await api.get(`/storefront/cms/pages/${pageId}`)).data },
+  async createPage(data: { title: string; slug: string; pageType: StorefrontPageType; startMode: 'blank' | 'template' | 'guided'; facts?: Record<string, unknown>; includeInNavigation?: boolean; enabledLocales?: Locale[] }): Promise<StorefrontPage> { return (await api.post('/storefront/cms/pages', data)).data },
+  async updatePage(page: StorefrontPage, change: Partial<StorefrontPage> & { document?: StorefrontDocument; createRedirect?: boolean; origin?: 'manual' | 'template' | 'ai' | 'restore' }): Promise<StorefrontPage> { return (await api.patch(`/storefront/cms/pages/${page.id}`, { expectedVersion: page.draftVersion, title: change.title, slug: change.slug, createRedirect: change.createRedirect, includeInNavigation: change.includeInNavigation, navigationLabel: change.navigationLabel, navigationOrder: change.navigationOrder, enabledLocales: change.enabledLocales, seoSettings: change.seoSettings, document: change.document, origin: change.origin })).data },
+  async duplicatePage(pageId: string, title: string, slug: string): Promise<StorefrontPage> { return (await api.post(`/storefront/cms/pages/${pageId}/duplicate`, { title, slug })).data },
+  async publishPage(pageId: string): Promise<StorefrontPage & { review?: StorefrontReviewIssue[] }> { return (await api.post(`/storefront/cms/pages/${pageId}/publish`)).data },
+  async unpublishPage(pageId: string): Promise<StorefrontPage> { return (await api.post(`/storefront/cms/pages/${pageId}/unpublish`)).data },
+  async archivePage(pageId: string): Promise<StorefrontPage> { return (await api.post(`/storefront/cms/pages/${pageId}/archive`)).data },
+  async revisions(pageId: string): Promise<StorefrontPageRevision[]> { return (await api.get(`/storefront/cms/pages/${pageId}/revisions`)).data },
+  async restoreRevision(page: StorefrontPage, revisionId: string): Promise<StorefrontPage> { return (await api.post(`/storefront/cms/pages/${page.id}/revisions/${revisionId}/restore`, { expectedVersion: page.draftVersion })).data },
+  async reviewPage(page: StorefrontPage): Promise<{ issues: StorefrontReviewIssue[] }> { return (await api.get(`/storefront/cms/pages/${page.id}/review`)).data },
+  async aiOutline(data: { pageType: StorefrontPageType; purpose: string; audience?: string; locale: Locale; tone: string; productIds?: string[]; categoryNames?: string[]; facts?: Record<string, unknown>; useOrganizationProfile?: boolean }): Promise<{ outline: SectionType[]; interpretation: string; sourceSummary: Record<string, unknown>; aiGenerated: boolean; fallbackReason?: string }> { return (await api.post('/storefront/cms/ai/outline', data)).data },
+  async aiPageDraft(data: { pageId: string; expectedVersion: number; outline: SectionType[]; locale: Locale; tone: string; productIds?: string[]; categoryNames?: string[]; facts?: Record<string, unknown>; useOrganizationProfile?: boolean }, key: string): Promise<{ page: StorefrontPage; aiGenerated: boolean; fallbackReason?: string }> { return (await api.post('/storefront/cms/ai/page-draft', data, { headers: { 'Idempotency-Key': key } })).data },
+  async aiFieldSuggestion(data: { pageId: string; expectedVersion: number; sectionId: string; field: string; action: string; currentValue: string; locale: Locale; productIds?: string[]; facts?: Record<string, unknown>; useOrganizationProfile?: boolean }): Promise<StorefrontAiSuggestion> { return (await api.post('/storefront/cms/ai/field-suggestion', data)).data },
+  async aiTranslate(data: { pageId: string; expectedVersion: number; sectionId: string; field: string; currentValue: string; sourceLocale: Locale; targetLocale: Locale; productIds?: string[]; facts?: Record<string, unknown>; useOrganizationProfile?: boolean }): Promise<StorefrontAiSuggestion> { return (await api.post('/storefront/cms/ai/translate', data)).data },
+  async aiReview(page: StorefrontPage): Promise<{ issues: StorefrontReviewIssue[] }> { return (await api.post('/storefront/cms/ai/page-review', { pageId: page.id, expectedVersion: page.draftVersion })).data },
+  async suggestionOutcome(id: string, outcome: 'accepted' | 'edited' | 'rejected'): Promise<void> { await api.post(`/storefront/cms/ai/suggestions/${id}/outcome`, { outcome }) },
   async assets(): Promise<StorefrontAsset[]> { return (await api.get('/storefront/cms/assets')).data },
   async upload(file: File, altTextEn: string, altTextBn?: string): Promise<StorefrontAsset> { const data = new FormData(); data.append('file', file); data.append('altTextEn', altTextEn); if (altTextBn) data.append('altTextBn', altTextBn); return (await api.post('/storefront/cms/assets', data, { headers: { 'Content-Type': 'multipart/form-data' } })).data },
   async updateAsset(asset: StorefrontAsset): Promise<StorefrontAsset> { return (await api.patch(`/storefront/cms/assets/${asset.id}`, { altTextEn: asset.altTextEn, altTextBn: asset.altTextBn, sortOrder: asset.sortOrder })).data },
   async deleteAsset(id: string): Promise<void> { await api.delete(`/storefront/cms/assets/${id}`) },
   async publicSite(slug: string): Promise<StorefrontSite> { return (await api.get(`/storefront/public/${encodeURIComponent(slug)}`)).data },
+  async publicPage(slug: string, pageSlug: string): Promise<{ slug: string; title: string; document: StorefrontDocument; seoSettings: StorefrontSite['seoSettings']; enabledLocales: Locale[] }> { return (await api.get(`/storefront/public/${encodeURIComponent(slug)}/pages/${encodeURIComponent(pageSlug)}`)).data },
   async categories(slug: string): Promise<string[]> { return (await api.get(`/storefront/public/${encodeURIComponent(slug)}/categories`)).data },
   async products(slug: string, params: Record<string, string | number | undefined> = {}): Promise<{ data: StorefrontProduct[]; total: number; page: number; totalPages: number }> { return (await api.get(`/storefront/public/${encodeURIComponent(slug)}/products`, { params })).data },
   async product(slug: string, productSlug: string): Promise<StorefrontProduct> { return (await api.get(`/storefront/public/${encodeURIComponent(slug)}/products/${encodeURIComponent(productSlug)}`)).data },

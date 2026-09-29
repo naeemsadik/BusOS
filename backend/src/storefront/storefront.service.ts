@@ -418,14 +418,12 @@ export class StorefrontService {
       });
     } catch (error: any) {
       if (error?.code !== '23505') throw error;
-      const existing = await this.dataSource
-        .getRepository(Order)
-        .findOne({
-          where: {
-            storefrontSiteId: site.id,
-            checkoutIdempotencyKey: idempotencyKey,
-          },
-        });
+      const existing = await this.dataSource.getRepository(Order).findOne({
+        where: {
+          storefrontSiteId: site.id,
+          checkoutIdempotencyKey: idempotencyKey,
+        },
+      });
       if (!existing) throw error;
       return this.orderReceipt(
         existing,
@@ -516,9 +514,14 @@ export class StorefrontService {
       site.draftDocument,
       site.publishedDocument,
     ]);
-    if (serialized.includes(asset.url) || serialized.includes(asset.storageKey))
+    if (
+      serialized.includes(asset.url) ||
+      serialized.includes(asset.storageKey) ||
+      (await this.pageService.referencesAsset(organizationId, asset.url)) ||
+      (await this.pageService.referencesAsset(organizationId, asset.storageKey))
+    )
       throw new ConflictException(
-        'Remove this image from the draft and published site before deleting it',
+        'Remove this image from every draft and published page before deleting it',
       );
     await this.assets.remove(asset);
     await this.assetStorage.remove(asset.storageKey);
