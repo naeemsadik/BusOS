@@ -38,12 +38,22 @@ import {
 import { StorefrontRateLimitService } from './storefront-rate-limit.service';
 import { StorefrontService } from './storefront.service';
 import { StorefrontPageService } from './storefront-page.service';
+import { StorefrontAiService } from './storefront-ai.service';
+import {
+  CmsAiFieldSuggestionDto,
+  CmsAiOutlineDto,
+  CmsAiPageDraftDto,
+  CmsAiReviewDto,
+  CmsAiSuggestionOutcomeDto,
+  CmsAiTranslateDto,
+} from './storefront-ai.dto';
 
 @Controller('storefront')
 export class StorefrontController {
   constructor(
     private readonly service: StorefrontService,
     private readonly pages: StorefrontPageService,
+    private readonly ai: StorefrontAiService,
     private readonly rateLimit: StorefrontRateLimitService,
   ) {}
 
@@ -186,6 +196,66 @@ export class StorefrontController {
   @Get('cms/pages/:pageId/review')
   reviewPage(@Param('pageId') pageId: string, @Req() req: any) {
     return this.pages.review(pageId, req.user.organization.id);
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequiredPermission(PermissionModuleType.WEBSITE, 'create')
+  @Post('cms/ai/outline')
+  aiOutline(@Body() dto: CmsAiOutlineDto, @Req() req: any) {
+    return this.ai.outline(dto, req.user.organization.id, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequiredPermission(PermissionModuleType.WEBSITE, 'edit')
+  @Post('cms/ai/page-draft')
+  aiPageDraft(
+    @Body() dto: CmsAiPageDraftDto,
+    @Headers('idempotency-key') key: string,
+    @Req() req: any,
+  ) {
+    return this.ai.pageDraft(
+      dto,
+      req.user.organization.id,
+      req.user.id,
+      key || '',
+    );
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequiredPermission(PermissionModuleType.WEBSITE, 'edit')
+  @Post('cms/ai/field-suggestion')
+  aiFieldSuggestion(@Body() dto: CmsAiFieldSuggestionDto, @Req() req: any) {
+    return this.ai.fieldSuggestion(dto, req.user.organization.id, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequiredPermission(PermissionModuleType.WEBSITE, 'edit')
+  @Post('cms/ai/translate')
+  aiTranslate(@Body() dto: CmsAiTranslateDto, @Req() req: any) {
+    return this.ai.translate(dto, req.user.organization.id, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequiredPermission(PermissionModuleType.WEBSITE, 'view')
+  @Post('cms/ai/page-review')
+  aiPageReview(@Body() dto: CmsAiReviewDto, @Req() req: any) {
+    return this.ai.review(dto, req.user.organization.id);
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequiredPermission(PermissionModuleType.WEBSITE, 'edit')
+  @Post('cms/ai/suggestions/:suggestionId/outcome')
+  aiSuggestionOutcome(
+    @Param('suggestionId') suggestionId: string,
+    @Body() dto: CmsAiSuggestionOutcomeDto,
+    @Req() req: any,
+  ) {
+    return this.ai.recordOutcome(
+      suggestionId,
+      dto,
+      req.user.organization.id,
+      req.user.id,
+    );
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)

@@ -6,7 +6,7 @@ import {
   StorefrontSectionType,
 } from './storefront.types';
 
-const section = (
+export const templateSection = (
   type: StorefrontSectionType,
   title: string,
   body = '',
@@ -20,7 +20,7 @@ const section = (
 const sectionsByType: Record<string, () => StorefrontSection[]> = {
   home: () => [
     {
-      ...section(
+      ...templateSection(
         'hero',
         'Add your main message',
         'Explain what visitors can find here.',
@@ -33,7 +33,7 @@ const sectionsByType: Record<string, () => StorefrontSection[]> = {
       },
     },
     {
-      ...section('productGrid', 'Featured products'),
+      ...templateSection('productGrid', 'Featured products'),
       content: {
         title: { en: 'Featured products' },
         productLimit: 8,
@@ -42,19 +42,19 @@ const sectionsByType: Record<string, () => StorefrontSection[]> = {
     },
   ],
   about: () => [
-    section(
+    templateSection(
       'hero',
       'Our story',
       'Tell visitors what your business does and why it matters.',
     ),
-    section(
+    templateSection(
       'imageText',
       'What makes us different',
       'Add a specific, verified reason customers choose your business.',
     ),
   ],
   contact: () => [
-    section(
+    templateSection(
       'contactHours',
       'Contact and opening hours',
       'Add your address, phone number, and the best way to contact you.',
@@ -62,7 +62,7 @@ const sectionsByType: Record<string, () => StorefrontSection[]> = {
   ],
   promotion: () => [
     {
-      ...section(
+      ...templateSection(
         'promotionalBanner',
         'Add your offer',
         'Add the exact terms and valid dates before publishing.',
@@ -76,13 +76,13 @@ const sectionsByType: Record<string, () => StorefrontSection[]> = {
     },
   ],
   landing: () => [
-    section(
+    templateSection(
       'hero',
       'Introduce this collection',
       'Describe who it is for without inventing product claims.',
     ),
     {
-      ...section('productGrid', 'Browse products'),
+      ...templateSection('productGrid', 'Browse products'),
       content: {
         title: { en: 'Browse products' },
         productLimit: 12,
@@ -91,21 +91,21 @@ const sectionsByType: Record<string, () => StorefrontSection[]> = {
     },
   ],
   delivery: () => [
-    section(
+    templateSection(
       'imageText',
       'Delivery and ordering',
       'Add verified delivery areas, fees, time estimates, and ordering steps.',
     ),
   ],
   faq: () => [
-    section(
+    templateSection(
       'imageText',
       'Frequently asked questions',
       'Add a common question and a verified answer. Duplicate this section for more questions.',
     ),
   ],
   custom: () => [
-    section(
+    templateSection(
       'imageText',
       'Add a page title',
       'Add the information visitors need.',

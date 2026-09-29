@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   CmsAiSuggestion,
+  Organization,
   Product,
   StorefrontAsset,
   StorefrontPage,
@@ -16,6 +17,7 @@ import { StorefrontAssetStorage } from './storefront-asset.storage';
 import { StorefrontRateLimitService } from './storefront-rate-limit.service';
 import { StorefrontPageService } from './storefront-page.service';
 import { StorefrontPageReviewService } from './storefront-page-review.service';
+import { StorefrontAiService } from './storefront-ai.service';
 
 @Module({
   imports: [
@@ -27,6 +29,7 @@ import { StorefrontPageReviewService } from './storefront-page-review.service';
       StorefrontPageRedirect,
       CmsAiSuggestion,
       Product,
+      Organization,
     ]),
     PermissionsModule,
   ],
@@ -35,6 +38,7 @@ import { StorefrontPageReviewService } from './storefront-page-review.service';
     StorefrontService,
     StorefrontPageService,
     StorefrontPageReviewService,
+    StorefrontAiService,
     StorefrontAssetStorage,
     StorefrontRateLimitService,
   ],
