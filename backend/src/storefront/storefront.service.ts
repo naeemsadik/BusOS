@@ -83,6 +83,11 @@ export class StorefrontService {
   async getCmsSite(organizationId: string) {
     return this.sites.findOne({ where: { organizationId } });
   }
+  async updateAiPreference(organizationId: string, enabled: boolean) {
+    const site = await this.requireCmsSite(organizationId);
+    site.aiEnabled = enabled;
+    return this.sites.save(site);
+  }
   async slugAvailability(rawSlug: string) {
     const slug = this.normalizeSlug(rawSlug);
     this.assertSlug(slug);

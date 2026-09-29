@@ -5,6 +5,9 @@ export class CreateStorefrontPages1790400000000 implements MigrationInterface {
 
   public async up(q: QueryRunner): Promise<void> {
     await q.query(
+      `ALTER TABLE "storefront_sites" ADD COLUMN IF NOT EXISTS "aiEnabled" boolean NOT NULL DEFAULT true`,
+    );
+    await q.query(
       `DO $$ BEGIN CREATE TYPE "storefront_pages_pagetype_enum" AS ENUM ('home','about','contact','promotion','landing','delivery','faq','custom'); EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
     );
     await q.query(
@@ -100,5 +103,8 @@ export class CreateStorefrontPages1790400000000 implements MigrationInterface {
     );
     await q.query(`DROP TYPE IF EXISTS "storefront_pages_status_enum"`);
     await q.query(`DROP TYPE IF EXISTS "storefront_pages_pagetype_enum"`);
+    await q.query(
+      `ALTER TABLE "storefront_sites" DROP COLUMN IF EXISTS "aiEnabled"`,
+    );
   }
 }

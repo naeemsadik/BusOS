@@ -33,6 +33,7 @@ import {
   SaveStorefrontDraftDto,
   SlugAvailabilityDto,
   UpdateAssetDto,
+  UpdateCmsAiPreferenceDto,
   UpdateStorefrontPageDto,
 } from './storefront.dto';
 import { StorefrontRateLimitService } from './storefront-rate-limit.service';
@@ -255,6 +256,16 @@ export class StorefrontController {
       dto,
       req.user.organization.id,
       req.user.id,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequiredPermission(PermissionModuleType.WEBSITE, 'edit')
+  @Patch('cms/ai-preference')
+  aiPreference(@Body() dto: UpdateCmsAiPreferenceDto, @Req() req: any) {
+    return this.service.updateAiPreference(
+      req.user.organization.id,
+      dto.enabled,
     );
   }
 

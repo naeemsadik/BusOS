@@ -5,6 +5,7 @@ export interface StorefrontSection { id: string; type: SectionType; visible: boo
 export interface StorefrontDocument { version: 1; header: { logoUrl?: string; showCatalog: boolean; showCart: boolean }; footer: { text: LocalizedText; showContact: boolean }; sections: StorefrontSection[] }
 export interface StorefrontSite {
   id?: string; slug: string; name?: string; logo?: string; status?: 'draft' | 'published' | 'inactive'; enabledLocales: Locale[]; defaultLocale: Locale;
+  aiEnabled?: boolean;
   themeTokens: { primary: string; accent: string; font: 'manrope' | 'noto-sans-bengali' | 'system'; radius: '0px' | '8px' | '12px' | '16px' };
   seoSettings: { title: LocalizedText; description: LocalizedText; socialImageUrl?: string };
   orderSettings: { deliveryFee: number; phone: string; email?: string; address?: LocalizedText };

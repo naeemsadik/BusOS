@@ -144,3 +144,7 @@ export class DuplicateStorefrontPageDto {
 export class RestoreStorefrontPageRevisionDto {
   @IsInt() @Min(1) expectedVersion: number;
 }
+
+export class UpdateCmsAiPreferenceDto {
+  @IsBoolean() enabled: boolean;
+}

@@ -34,7 +34,6 @@ import {
   pageTemplate,
 } from './storefront-page.templates';
 import { StorefrontPageReviewService } from './storefront-page-review.service';
-import { DEFAULT_SEO } from './storefront.types';
 
 const RESERVED_PAGE_PATHS = new Set([
   'admin',
@@ -145,9 +144,14 @@ export class StorefrontPageService {
   ) {
     return this.dataSource.transaction(async (manager) => {
       const repository = manager.getRepository(StorefrontPage);
-      const page = await repository.findOne({
-        where: { id: pageId, organizationId },
-      });
+      const page = await repository
+        .createQueryBuilder('page')
+        .setLock('pessimistic_write')
+        .where('page.id = :pageId AND page.organizationId = :organizationId', {
+          pageId,
+          organizationId,
+        })
+        .getOne();
       if (!page) throw new NotFoundException('Page not found');
       if (page.draftVersion !== dto.expectedVersion)
         throw new ConflictException({
@@ -205,17 +209,23 @@ export class StorefrontPageService {
           throw new ConflictException('That page address is already in use');
         throw error;
       }
-      if (oldSlug !== nextSlug && dto.createRedirect)
-        await manager.getRepository(StorefrontPageRedirect).upsert(
-          {
+      if (oldSlug !== nextSlug && dto.createRedirect) {
+        const redirectRepository = manager.getRepository(
+          StorefrontPageRedirect,
+        );
+        const redirect =
+          (await redirectRepository.findOne({
+            where: { siteId: page.siteId, fromSlug: oldSlug },
+          })) ||
+          redirectRepository.create({
             organizationId,
             siteId: page.siteId,
             pageId: page.id,
             fromSlug: oldSlug,
-            toSlug: nextSlug,
-          },
-          ['siteId', 'fromSlug'],
-        );
+          });
+        redirect.toSlug = nextSlug;
+        await redirectRepository.save(redirect);
+      }
       await this.trimRevisions(page.id, manager);
       return saved;
     });
@@ -272,11 +282,15 @@ export class StorefrontPageService {
         throw new NotFoundException('Page not found');
       validateStorefrontDocument(page.draftDocument);
       validateSeo(page.seoSettings);
+      const site = await manager.getRepository(StorefrontSite).findOne({
+        where: { id: page.siteId, organizationId },
+      });
       const issues = this.reviewService.review(
         page.draftDocument,
         page.seoSettings,
         page.enabledLocales,
         page.pageType,
+        site?.themeTokens,
       );
       const mustFix = issues.filter((issue) => issue.severity === 'mustFix');
       if (mustFix.length)
@@ -389,12 +403,14 @@ export class StorefrontPageService {
 
   async review(pageId: string, organizationId: string) {
     const page = await this.requirePage(pageId, organizationId);
+    const site = await this.requireSite(organizationId);
     return {
       issues: this.reviewService.review(
         page.draftDocument,
         page.seoSettings,
         page.enabledLocales,
         page.pageType,
+        site.themeTokens,
       ),
     };
   }

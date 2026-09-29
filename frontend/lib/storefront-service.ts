@@ -9,6 +9,7 @@ export const storefrontService = {
     return (await api.put('/storefront/cms/draft', { expectedVersion: site.draftVersion, enabledLocales: site.enabledLocales, defaultLocale: site.defaultLocale, themeTokens: site.themeTokens, seoSettings: site.seoSettings, orderSettings: site.orderSettings, document })).data
   },
   async publish(): Promise<StorefrontSite> { return (await api.post('/storefront/cms/publish')).data },
+  async updateAiPreference(enabled: boolean): Promise<StorefrontSite> { return (await api.patch('/storefront/cms/ai-preference', { enabled })).data },
   async pages(): Promise<StorefrontPage[]> { return (await api.get('/storefront/cms/pages')).data },
   async page(pageId: string): Promise<StorefrontPage> { return (await api.get(`/storefront/cms/pages/${pageId}`)).data },
   async createPage(data: { title: string; slug: string; pageType: StorefrontPageType; startMode: 'blank' | 'template' | 'guided'; facts?: Record<string, unknown>; includeInNavigation?: boolean; enabledLocales?: Locale[] }): Promise<StorefrontPage> { return (await api.post('/storefront/cms/pages', data)).data },

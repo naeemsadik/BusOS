@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { StorefrontDocument, StorefrontSeoSettings } from './storefront.types';
+import {
+  StorefrontDocument,
+  StorefrontSeoSettings,
+  StorefrontThemeTokens,
+} from './storefront.types';
 
 export interface StorefrontReviewIssue {
   severity: 'mustFix' | 'recommended' | 'information';
@@ -16,6 +20,7 @@ export class StorefrontPageReviewService {
     seo: StorefrontSeoSettings,
     enabledLocales: string[],
     pageType?: string,
+    theme?: StorefrontThemeTokens,
   ): StorefrontReviewIssue[] {
     const issues: StorefrontReviewIssue[] = [];
     if (!document.sections.some((section) => section.visible))
@@ -36,6 +41,15 @@ export class StorefrontPageReviewService {
           severity: 'mustFix',
           code: 'unsafe-link',
           message: 'Use an internal link or a secure HTTPS link.',
+          sectionId: section.id,
+          field: 'ctaHref',
+        });
+      if (content.ctaHref && /^https:\/\//i.test(content.ctaHref))
+        issues.push({
+          severity: 'information',
+          code: 'external-link',
+          message:
+            'This button opens an external website. Verify the destination before publishing.',
           sectionId: section.id,
           field: 'ctaHref',
         });
@@ -122,6 +136,33 @@ export class StorefrontPageReviewService {
         code: 'missing-action',
         message: 'Consider adding a clear visitor action.',
       });
+    if (theme && contrast(theme.primary, '#ffffff') < 4.5)
+      issues.push({
+        severity: 'recommended',
+        code: 'primary-contrast',
+        message: 'The primary color has low contrast with white button text.',
+      });
+    if (theme && contrast(theme.accent, '#000000') < 4.5)
+      issues.push({
+        severity: 'recommended',
+        code: 'accent-contrast',
+        message:
+          'The accent color has low contrast with dark promotional text.',
+      });
     return issues;
   }
+}
+
+function contrast(left: string, right: string) {
+  const luminance = (hex: string) => {
+    const values = [1, 3, 5]
+      .map((start) => parseInt(hex.slice(start, start + 2), 16) / 255)
+      .map((value) =>
+        value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4,
+      );
+    return values[0] * 0.2126 + values[1] * 0.7152 + values[2] * 0.0722;
+  };
+  const one = luminance(left);
+  const two = luminance(right);
+  return (Math.max(one, two) + 0.05) / (Math.min(one, two) + 0.05);
 }
