@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { Order, OrderStatus, Product } from '../entities';
+import { Order, OrderItem, OrderStatus, Product } from '../entities';
 
 const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
@@ -32,8 +32,10 @@ export class OrderInventoryService {
   }
   private async lockOrder(orderId: string, organizationId: string, manager: EntityManager) {
     const order = await manager.getRepository(Order).createQueryBuilder('order').setLock('pessimistic_write')
-      .leftJoinAndSelect('order.items', 'items').where('order.id = :orderId AND order.organizationId = :organizationId', { orderId, organizationId }).getOne();
-    if (!order) throw new NotFoundException('Order not found'); return order;
+      .where('order.id = :orderId AND order.organizationId = :organizationId', { orderId, organizationId }).getOne();
+    if (!order) throw new NotFoundException('Order not found');
+    order.items = await manager.getRepository(OrderItem).find({ where: { orderId } });
+    return order;
   }
   private async commit(order: Order, organizationId: string, manager: EntityManager) {
     if (order.stockCommittedAt && !order.stockRestoredAt) return;

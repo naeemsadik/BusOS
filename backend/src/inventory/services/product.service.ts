@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, In } from 'typeorm';
-import { Product, StockMovement, Organization, StockMovementType, User } from '../../entities';
+import { Product, StockMovement, Organization, StockMovementType, User, StorefrontSite } from '../../entities';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -28,6 +28,8 @@ export class ProductService {
     private productRepository: Repository<Product>,
     @InjectRepository(StockMovement)
     private stockMovementRepository: Repository<StockMovement>,
+    @InjectRepository(StorefrontSite)
+    private storefrontSiteRepository: Repository<StorefrontSite>,
   ) {}
 
   async create(
@@ -49,8 +51,10 @@ export class ProductService {
     }
 
     const slug = await this.uniqueSlug(createProductDto.slug || createProductDto.name, organization.id);
+    const hasStorefront = await this.storefrontSiteRepository.exist({ where: { organizationId: organization.id } });
     const product = this.productRepository.create({
       ...createProductDto,
+      storefrontVisible: createProductDto.storefrontVisible ?? hasStorefront,
       slug,
       sku: createProductDto.sku ?? null,
       organization,
@@ -71,6 +75,7 @@ export class ProductService {
       });
     }
 
+    void this.invalidateStorefront(organization.id);
     return savedProduct;
   }
 
@@ -277,7 +282,7 @@ export class ProductService {
     if (updateProductDto.slug && updateProductDto.slug !== product.slug) updateProductDto.slug = await this.uniqueSlug(updateProductDto.slug, organization.id, product.id);
     Object.assign(product, updateProductDto);
     const updatedProduct = await this.productRepository.save(product);
-
+    void this.invalidateStorefront(organization.id);
     return updatedProduct;
   }
 
@@ -295,6 +300,7 @@ export class ProductService {
   async remove(id: string, organization: Organization): Promise<void> {
     const product = await this.findOne(id, organization);
     await this.productRepository.remove(product);
+    void this.invalidateStorefront(organization.id);
   }
 
   async bulkDelete(
@@ -318,6 +324,7 @@ export class ProductService {
       }
 
       await this.productRepository.remove(products);
+      void this.invalidateStorefront(organization.id);
       return { deleted: products.length };
     } catch (error) {
       if (error instanceof BadRequestException) {
@@ -328,6 +335,22 @@ export class ProductService {
         error instanceof Error ? error.stack : undefined,
       );
       throw new BadRequestException('Failed to delete products');
+    }
+  }
+
+  private async invalidateStorefront(organizationId: string) {
+    const frontend = process.env.FRONTEND_1_URL;
+    const secret = process.env.STOREFRONT_REVALIDATE_SECRET;
+    if (!frontend || !secret) return;
+    try {
+      const site = await this.storefrontSiteRepository.findOne({ where: { organizationId } });
+      if (!site) return;
+      await fetch(`${frontend.replace(/\/$/, '')}/api/storefront/revalidate`, {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-revalidate-secret': secret },
+        body: JSON.stringify({ slug: site.slug }), signal: AbortSignal.timeout(2500),
+      });
+    } catch (error) {
+      this.logger.warn(`Product saved; storefront cache will refresh by TTL: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -365,7 +388,7 @@ export class ProductService {
       organization,
       user,
     });
-
+    void this.invalidateStorefront(organization.id);
     return updatedProduct;
   }
 

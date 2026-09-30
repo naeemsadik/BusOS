@@ -1,5 +1,5 @@
-import { api } from './api';
-import { customersService } from './customers-service';
+import { api } from "./api";
+import { customersService } from "./customers-service";
 
 export interface OrderItem {
   productId: string;
@@ -31,9 +31,22 @@ export interface CreateOrderData {
 }
 
 export interface UpdateOrderData {
-  status?: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
-  paymentStatus?: 'pending' | 'paid' | 'partial' | 'failed' | 'refunded' | 'cod';
-  paymentMethod?: 'cash' | 'card' | 'bank_transfer' | 'mobile_money' | 'credit';
+  status?:
+    | "pending"
+    | "confirmed"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled"
+    | "returned";
+  paymentStatus?:
+    | "pending"
+    | "paid"
+    | "partial"
+    | "failed"
+    | "refunded"
+    | "cod";
+  paymentMethod?: "cash" | "card" | "bank_transfer" | "mobile_money" | "credit";
   paidAmount?: number;
   trackingNumber?: string;
   courierService?: string;
@@ -49,7 +62,7 @@ export interface UpdateOrderData {
 export interface Order {
   id: string;
   orderNumber: string;
-  source: 'pos' | 'manual' | 'storefront';
+  source: "pos" | "manual" | "storefront";
   storefrontLocale?: string;
   customerId?: string;
   customerName?: string;
@@ -96,6 +109,7 @@ export interface Order {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  ownerSeenAt?: string | null;
 }
 
 export interface OrderQuery {
@@ -132,12 +146,12 @@ export interface OrderStats {
 
 class OrdersService {
   async createOrder(data: CreateOrderData): Promise<Order> {
-    const response = await api.post('/orders', data);
+    const response = await api.post("/orders", data);
     return response.data;
   }
 
   async getOrders(query?: OrderQuery): Promise<OrdersResponse> {
-    const response = await api.get('/orders', { params: query });
+    const response = await api.get("/orders", { params: query });
     return response.data;
   }
 
@@ -151,14 +165,26 @@ class OrdersService {
     return response.data;
   }
 
-  async deleteOrder(id: string, customerId: string, orderValue: number): Promise<void> {
+  async deleteOrder(
+    id: string,
+    customerId: string,
+    orderValue: number,
+  ): Promise<void> {
     await api.delete(`/orders/${id}`);
     await customersService.updateCustomerStats(customerId, -orderValue);
   }
 
   async getOrderStats(): Promise<OrderStats> {
-    const response = await api.get('/orders/stats');
+    const response = await api.get("/orders/stats");
     return response.data;
+  }
+
+  async getStorefrontUnseenCount(): Promise<number> {
+    return (await api.get("/orders/storefront/unseen-count")).data.count;
+  }
+
+  async markStorefrontSeen(id: string): Promise<void> {
+    await api.post(`/orders/${id}/seen`);
   }
 }
 

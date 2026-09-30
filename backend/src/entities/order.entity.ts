@@ -42,6 +42,7 @@ export enum PaymentMethod {
 }
 
 export enum OrderSource { POS = 'pos', MANUAL = 'manual', STOREFRONT = 'storefront' }
+export enum DeliveryMethod { DELIVERY = 'delivery', PICKUP = 'pickup' }
 
 @Entity('orders')
 export class Order {
@@ -65,6 +66,19 @@ export class Order {
   @Column({ type: 'timestamp', nullable: true }) confirmationExpiresAt: Date | null;
   @Column({ type: 'timestamp', nullable: true }) stockCommittedAt: Date | null;
   @Column({ type: 'timestamp', nullable: true }) stockRestoredAt: Date | null;
+  @Column({ type: 'varchar', length: 2, nullable: true }) locale: 'en' | 'bn' | null;
+  @Column({ type: 'enum', enum: DeliveryMethod, nullable: true })
+  deliveryMethod: DeliveryMethod | null;
+  @Column({ type: 'jsonb', nullable: true })
+  deliveryAddress: Record<string, string> | null;
+  @Column({ type: 'text', nullable: true }) customerNote: string | null;
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  idempotencyKey: string | null;
+  @Column({ type: 'varchar', length: 128, nullable: true, select: false })
+  publicToken: string | null;
+  @Column({ type: 'timestamp', nullable: true }) ownerSeenAt: Date | null;
+  @Column({ type: 'jsonb', nullable: true })
+  customerSnapshot: { name?: string; phone?: string } | null;
 
   @ManyToOne(() => Customer, { nullable: true })
   @JoinColumn({ name: 'customerId' })

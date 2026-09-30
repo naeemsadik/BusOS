@@ -8,8 +8,9 @@ test("admin can inspect and search organizations", async ({ page }) => {
 
   await page.goto(`${baseUrl}/login`)
   await page.getByLabel("Username").fill(username || "")
-  await page.getByLabel("Password").fill(password || "")
+  await page.getByLabel("Password", { exact: true }).fill(password || "")
   await page.getByRole("button", { name: "Sign In" }).click()
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 30_000 })
   await page.goto(`${baseUrl}/organizations`)
   await expect(page.getByRole("heading", { name: "Organizations" })).toBeVisible()
 

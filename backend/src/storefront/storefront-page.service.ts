@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, In, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, IsNull, Repository } from 'typeorm';
 import {
   Product,
   ProductStatus,
@@ -13,6 +13,9 @@ import {
   StorefrontPage,
   StorefrontPageRedirect,
   StorefrontPageRevision,
+  StorefrontRevisionKind,
+  StorefrontPageKind,
+  StorefrontPageLifecycleStatus,
   StorefrontPageStatus,
   StorefrontPageType,
   StorefrontPublicationStatus,
@@ -34,6 +37,7 @@ import {
   pageTemplate,
 } from './storefront-page.templates';
 import { StorefrontPageReviewService } from './storefront-page-review.service';
+import { TenantScope } from './tenant-scope';
 
 const RESERVED_PAGE_PATHS = new Set([
   'admin',
@@ -45,6 +49,12 @@ const RESERVED_PAGE_PATHS = new Set([
   'checkout',
   'confirmation',
   'product',
+  'products',
+  'order',
+  'orders',
+  'pages',
+  'search',
+  'en',
   'static',
 ]);
 
@@ -63,11 +73,12 @@ export class StorefrontPageService {
     private readonly assets: Repository<StorefrontAsset>,
     private readonly dataSource: DataSource,
     private readonly reviewService: StorefrontPageReviewService,
+    private readonly tenant: TenantScope,
   ) {}
 
   list(organizationId: string) {
     return this.pages.find({
-      where: { organizationId },
+      where: { organizationId, deletedAt: IsNull() },
       order: { isHomePage: 'DESC', navigationOrder: 'ASC', createdAt: 'ASC' },
     });
   }
@@ -82,6 +93,18 @@ export class StorefrontPageService {
     userId: string,
   ) {
     const site = await this.requireSite(organizationId);
+    if (dto.pageType !== StorefrontPageType.HOME) {
+      const customCount = await this.pages.count({
+        where: {
+          organizationId,
+          siteId: site.id,
+          kind: StorefrontPageKind.CUSTOM,
+          deletedAt: IsNull(),
+        },
+      });
+      if (customCount >= 10)
+        throw new BadRequestException('A storefront can have at most 10 custom pages');
+    }
     const slug = this.normalizeSlug(dto.slug);
     const isHome = dto.pageType === StorefrontPageType.HOME;
     this.assertPageSlug(slug, isHome);
@@ -111,6 +134,9 @@ export class StorefrontPageService {
       slug,
       pageType: dto.pageType as StorefrontPageType,
       isHomePage: isHome,
+      kind: isHome ? StorefrontPageKind.HOME : StorefrontPageKind.CUSTOM,
+      lifecycleStatus: StorefrontPageLifecycleStatus.DRAFT,
+      localizedTitle: { en: dto.title.trim() },
       includeInNavigation: isHome ? false : dto.includeInNavigation,
       navigationLabel: { en: dto.title.trim() },
       enabledLocales: dto.enabledLocales,
@@ -187,6 +213,7 @@ export class StorefrontPageService {
       );
       const oldSlug = page.slug;
       page.title = dto.title?.trim() || page.title;
+      page.localizedTitle = { ...page.localizedTitle, en: page.title };
       page.slug = nextSlug;
       if (dto.includeInNavigation !== undefined)
         page.includeInNavigation = page.isHomePage
@@ -196,6 +223,8 @@ export class StorefrontPageService {
         page.navigationLabel = this.cleanLabels(dto.navigationLabel);
       if (dto.navigationOrder !== undefined)
         page.navigationOrder = dto.navigationOrder;
+      page.showInMenu = page.includeInNavigation;
+      page.menuOrder = page.navigationOrder;
       if (dto.enabledLocales) page.enabledLocales = dto.enabledLocales;
       if (dto.seoSettings) page.seoSettings = dto.seoSettings as any;
       if (dto.document) page.draftDocument = dto.document;
@@ -248,6 +277,9 @@ export class StorefrontPageService {
       pageType: source.pageType,
       status: StorefrontPageStatus.DRAFT,
       isHomePage: false,
+      kind: StorefrontPageKind.CUSTOM,
+      lifecycleStatus: StorefrontPageLifecycleStatus.DRAFT,
+      localizedTitle: { en: dto.title.trim() },
       includeInNavigation: false,
       navigationLabel: { en: dto.title.trim() },
       enabledLocales: source.enabledLocales,
@@ -280,7 +312,7 @@ export class StorefrontPageService {
         .getOne();
       if (!page || page.status === StorefrontPageStatus.ARCHIVED)
         throw new NotFoundException('Page not found');
-      validateStorefrontDocument(page.draftDocument);
+      validateStorefrontDocument(page.draftDocument, { publish: true });
       validateSeo(page.seoSettings);
       const site = await manager.getRepository(StorefrontSite).findOne({
         where: { id: page.siteId, organizationId },
@@ -311,6 +343,7 @@ export class StorefrontPageService {
       page.publishedVersion = page.draftVersion;
       page.publishedAt = new Date();
       page.status = StorefrontPageStatus.PUBLISHED;
+      page.lifecycleStatus = StorefrontPageLifecycleStatus.PUBLISHED;
       page.updatedBy = userId;
       const saved = await manager.save(page);
       if (saved.isHomePage) {
@@ -335,22 +368,16 @@ export class StorefrontPageService {
 
   async unpublish(pageId: string, organizationId: string, userId: string) {
     const page = await this.requirePage(pageId, organizationId);
-    page.status = StorefrontPageStatus.DRAFT;
-    page.publishedDocument = null;
-    page.publishedVersion = null;
-    page.publishedAt = null;
-    page.updatedBy = userId;
     if (page.isHomePage)
-      await this.sites.update(
-        { id: page.siteId, organizationId },
-        {
-          status: StorefrontPublicationStatus.DRAFT,
-          publishedDocument: null,
-          publishedVersion: null,
-          publishedAt: null,
-        },
-      );
-    return this.pages.save(page);
+      throw new BadRequestException("Home can't be removed. Replace its content or unpublish the whole shop.");
+    page.status = StorefrontPageStatus.DRAFT;
+    page.lifecycleStatus = StorefrontPageLifecycleStatus.UNPUBLISHED;
+    page.includeInNavigation = false;
+    page.showInMenu = false;
+    page.updatedBy = userId;
+    const saved = await this.pages.save(page);
+    void this.invalidateSite(page.siteId, organizationId);
+    return saved;
   }
 
   async archive(pageId: string, organizationId: string, userId: string) {
@@ -360,11 +387,66 @@ export class StorefrontPageService {
         'The home page cannot be archived; publish another home page first',
       );
     page.status = StorefrontPageStatus.ARCHIVED;
+    page.lifecycleStatus = page.publishedDocument ? StorefrontPageLifecycleStatus.UNPUBLISHED : StorefrontPageLifecycleStatus.DRAFT;
     page.includeInNavigation = false;
-    page.publishedDocument = null;
-    page.publishedVersion = null;
+    page.showInMenu = false;
+    page.deletedAt = new Date();
+    page.purgeAfter = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     page.updatedBy = userId;
-    return this.pages.save(page);
+    const saved = await this.pages.save(page);
+    void this.invalidateSite(page.siteId, organizationId);
+    return saved;
+  }
+
+  listTrash(organizationId: string) {
+    return this.pages.createQueryBuilder('page')
+      .where('page.organizationId = :organizationId', { organizationId })
+      .andWhere('page.deletedAt IS NOT NULL')
+      .orderBy('page.deletedAt', 'DESC').getMany();
+  }
+
+  async restoreFromTrash(pageId: string, organizationId: string, userId: string, slug?: string) {
+    const page = await this.pages.findOne({ where: { id: pageId, organizationId } });
+    if (!page?.deletedAt) throw new NotFoundException('Page not found in Trash');
+    if (slug) page.slug = this.normalizeSlug(slug);
+    const collision = await this.pages.createQueryBuilder('other')
+      .where('other.siteId = :siteId AND lower(other.slug) = lower(:slug)', { siteId: page.siteId, slug: page.slug })
+      .andWhere('other.deletedAt IS NULL').andWhere('other.id <> :id', { id: page.id }).getExists();
+    if (collision) throw new ConflictException({ code: 'SLUG_TAKEN', message: 'Choose a new page address before restoring' });
+    page.deletedAt = null;
+    page.purgeAfter = null;
+    page.status = StorefrontPageStatus.DRAFT;
+    page.lifecycleStatus = page.publishedDocument ? StorefrontPageLifecycleStatus.UNPUBLISHED : StorefrontPageLifecycleStatus.DRAFT;
+    page.updatedBy = userId;
+    const saved = await this.pages.save(page);
+    void this.invalidateSite(page.siteId, organizationId);
+    return saved;
+  }
+
+  async purge(pageId: string, organizationId: string) {
+    const page = await this.pages.findOne({ where: { id: pageId, organizationId } });
+    if (!page?.deletedAt) throw new NotFoundException('Page not found in Trash');
+    await this.pages.remove(page);
+    return { deleted: true };
+  }
+
+  async takeDownSection(pageId: string, sectionId: string, organizationId: string, userId: string) {
+    const page = await this.requirePage(pageId, organizationId);
+    const published: any = page.publishedDocument;
+    const draft: any = page.draftDocument;
+    const live = published?.sections?.find((section: any) => section.id === sectionId);
+    if (!live) throw new BadRequestException('This section has never been published');
+    await this.saveRevision(page, StorefrontRevisionOrigin.MANUAL, userId);
+    live.visible = false;
+    const draftSection = draft?.sections?.find((section: any) => section.id === sectionId);
+    if (draftSection) draftSection.visible = false;
+    page.publishedDocument = published;
+    page.draftDocument = draft;
+    page.draftVersion += 1;
+    page.updatedBy = userId;
+    const saved = await this.pages.save(page);
+    void this.invalidateSite(page.siteId, organizationId);
+    return saved;
   }
 
   async listRevisions(pageId: string, organizationId: string) {
@@ -464,14 +546,10 @@ export class StorefrontPageService {
       throw new BadRequestException('That page address is reserved');
   }
   private async requireSite(organizationId: string) {
-    const site = await this.sites.findOne({ where: { organizationId } });
-    if (!site) throw new NotFoundException('Set up your storefront first');
-    return site;
+    return this.tenant.require(this.sites, organizationId, {}, 'Storefront');
   }
   private async requirePage(id: string, organizationId: string) {
-    const page = await this.pages.findOne({ where: { id, organizationId } });
-    if (!page) throw new NotFoundException('Page not found');
-    return page;
+    return this.tenant.require(this.pages, organizationId, { id, deletedAt: IsNull() as any }, 'Page');
   }
   private cleanLabels(labels: Record<string, string>) {
     return Object.fromEntries(
@@ -504,6 +582,7 @@ export class StorefrontPageService {
     await repository.save(
       repository.create({
         organizationId: page.organizationId,
+        siteId: page.siteId,
         pageId: page.id,
         version: page.draftVersion,
         document: JSON.parse(JSON.stringify(page.draftDocument)),
@@ -512,7 +591,10 @@ export class StorefrontPageService {
           enabledLocales: page.enabledLocales,
         },
         origin,
+        kind: StorefrontRevisionKind.CHECKPOINT,
+        label: origin === StorefrontRevisionOrigin.RESTORE ? 'Before revision restore' : 'Checkpoint',
         authorId,
+        createdBy: authorId,
       }),
     );
   }
@@ -606,5 +688,19 @@ export class StorefrontPageService {
       throw new BadRequestException(
         'One or more internal links point to a page that is not published',
       );
+  }
+
+  private async invalidateSite(siteId: string, organizationId: string) {
+    const frontend = process.env.FRONTEND_1_URL;
+    const secret = process.env.STOREFRONT_REVALIDATE_SECRET;
+    if (!frontend || !secret) return;
+    try {
+      const site = await this.sites.findOne({ where: { id: siteId, organizationId } });
+      if (!site) return;
+      await fetch(`${frontend.replace(/\/$/, '')}/api/storefront/revalidate`, {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-revalidate-secret': secret },
+        body: JSON.stringify({ slug: site.slug }), signal: AbortSignal.timeout(2500),
+      });
+    } catch { /* publish state is authoritative; TTL is the fallback */ }
   }
 }

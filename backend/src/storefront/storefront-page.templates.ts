@@ -149,3 +149,19 @@ export function addLocalePlaceholders(
   if (!locales.includes('bn')) return document;
   return JSON.parse(JSON.stringify(document)) as StorefrontDocument;
 }
+
+export function starterTemplates() {
+  return [
+    ['general', 'General store', 'home'],
+    ['clothing', 'Clothing', 'landing'],
+    ['pharmacy', 'Pharmacy / health', 'home'],
+    ['food', 'Food & restaurant', 'promotion'],
+    ['blank', 'Blank', 'custom'],
+  ].map(([id, name, type]) => ({
+    id,
+    name,
+    tokens: ['shopName', 'topCategory', 'city'],
+    home: pageTemplate(type, id === 'blank' ? 'blank' : 'template'),
+    suggestedAbout: pageTemplate('about', 'template'),
+  }));
+}

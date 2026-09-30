@@ -14,6 +14,7 @@ export {
   PaymentStatus,
   PaymentMethod,
   OrderSource,
+  DeliveryMethod,
 } from './order.entity';
 export { OrderItem } from './order-item.entity';
 export { Invoice, InvoiceStatus } from './invoice.entity';
@@ -56,12 +57,16 @@ export {
   StorefrontPage,
   StorefrontPageStatus,
   StorefrontPageType,
+  StorefrontPageKind,
+  StorefrontPageLifecycleStatus,
 } from './storefront-page.entity';
 export {
   StorefrontPageRevision,
   StorefrontRevisionOrigin,
+  StorefrontRevisionKind,
 } from './storefront-page-revision.entity';
 export { StorefrontPageRedirect } from './storefront-page-redirect.entity';
+export { StorefrontSlugAlias } from './storefront-slug-alias.entity';
 export {
   CmsAiSuggestion,
   CmsAiSuggestionOutcome,

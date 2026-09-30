@@ -4,6 +4,7 @@ out/
 coverage/
 backend/uploads/
 **/playwright-report/
+**/playwright-report-demo/
 **/test-results/
 *.tsbuildinfo
 **/next-env.d.ts

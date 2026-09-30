@@ -18,13 +18,19 @@ describe('storefront contract security', () => {
   it.each([
     ['duplicate section ids', (value: any) => value.sections.push({ ...value.sections[0] })],
     ['unsafe links', (value: any) => { value.sections[0].content.ctaHref = 'javascript:alert(1)' }],
-    ['missing English fallback', (value: any) => { value.sections[0].content.title = { en: '', bn: 'স্বাগতম' } }],
     ['excessive product limits', (value: any) => { value.sections[1].content.productLimit = 25 }],
     ['unknown section types', (value: any) => { value.sections[0].type = 'html' }],
   ])('rejects %s', (_label, mutate) => {
     const value = document();
     mutate(value);
     expect(() => validateStorefrontDocument(value)).toThrow(BadRequestException);
+  });
+
+  it('allows incomplete drafts but requires publish-ready content', () => {
+    const value: any = document();
+    value.sections[0].content.title = { en: '', bn: 'স্বাগতম' };
+    expect(() => validateStorefrontDocument(value)).not.toThrow();
+    expect(() => validateStorefrontDocument(value, { publish: true })).toThrow(BadRequestException);
   });
 
   it('rejects excessive documents and invalid money or theme values', () => {

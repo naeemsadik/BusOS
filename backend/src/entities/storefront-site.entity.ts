@@ -19,6 +19,8 @@ import {
 export enum StorefrontPublicationStatus {
   DRAFT = 'draft',
   PUBLISHED = 'published',
+  UNPUBLISHED = 'unpublished',
+  // Retained only so rows created by the legacy migration can be read safely.
   INACTIVE = 'inactive',
 }
 
@@ -28,7 +30,9 @@ export enum StorefrontPublicationStatus {
 export class StorefrontSite {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({ type: 'uuid' }) organizationId: string;
-  @OneToOne(() => Organization, { onDelete: 'CASCADE' })
+  @OneToOne(() => Organization, (organization) => organization.storefrontSite, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'organizationId' })
   organization: Organization;
   @Column({ type: 'varchar', length: 63 }) slug: string;
@@ -50,6 +54,24 @@ export class StorefrontSite {
   @Column({ type: 'jsonb', default: () => "'{}'" })
   orderSettings: StorefrontOrderSettings;
   @Column({ type: 'boolean', default: true }) aiEnabled: boolean;
+  @Column({ type: 'boolean', default: true }) orderingEnabled: boolean;
+  @Column({ type: 'jsonb', default: () => "'{}'::jsonb" })
+  orderingPausedMessage: Partial<Record<'en' | 'bn', string>>;
+  @Column({ type: 'jsonb', default: () => "'{}'::jsonb" })
+  draftSettings: Record<string, any>;
+  @Column({ type: 'jsonb', nullable: true })
+  publishedSettings: Record<string, any> | null;
+  @Column({ type: 'int', default: 1 }) settingsVersion: number;
+  @Column({ type: 'jsonb', default: () => "'{}'::jsonb" })
+  shopProfile: Record<string, any>;
+  @Column({ type: 'jsonb', default: () => "'{}'::jsonb" })
+  setupProgress: Record<string, any>;
+  @Column({ type: 'uuid', nullable: true }) publishRequestedBy: string | null;
+  @Column({ type: 'timestamp', nullable: true }) publishRequestedAt: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) firstPublishedAt: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) lastPublishedAt: Date | null;
+  @Column({ type: 'jsonb', default: () => "'[]'::jsonb" })
+  slugChanges: Array<{ from: string; to: string; changedAt: string }>;
   @Column({ type: 'jsonb' }) draftDocument: StorefrontDocument;
   @Column({ type: 'jsonb', nullable: true })
   publishedDocument: StorefrontDocument | null;

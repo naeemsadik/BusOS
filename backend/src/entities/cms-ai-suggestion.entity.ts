@@ -12,6 +12,8 @@ export enum CmsAiSuggestionOutcome {
   EDITED = 'edited',
   REJECTED = 'rejected',
   FAILED = 'failed',
+  SHOWN = 'shown',
+  FALLBACK = 'fallback',
 }
 
 @Entity('cms_ai_suggestions')
@@ -20,6 +22,7 @@ export class CmsAiSuggestion {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({ type: 'uuid' }) organizationId: string;
   @Column({ type: 'uuid' }) userId: string;
+  @Column({ type: 'uuid', nullable: true }) siteId: string | null;
   @Column({ type: 'uuid', nullable: true }) pageId: string | null;
   @Column({ type: 'varchar', length: 80, nullable: true }) sectionId:
     | string

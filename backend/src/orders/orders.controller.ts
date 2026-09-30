@@ -50,6 +50,16 @@ export class OrdersController {
     return this.ordersService.getOrderStats(req.user.organization);
   }
 
+  @Get('storefront/unseen-count')
+  async storefrontUnseenCount(@Request() req) {
+    return this.ordersService.storefrontUnseenCount(req.user.organization.id);
+  }
+
+  @Post(':id/seen')
+  async markSeen(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+    return this.ordersService.markSeen(id, req.user.organization.id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get order by ID' })
   @ApiResponse({ status: 200, description: 'Order retrieved successfully' })

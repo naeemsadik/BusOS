@@ -20,6 +20,17 @@ export enum StorefrontPageStatus {
   ARCHIVED = 'archived',
 }
 
+export enum StorefrontPageKind {
+  HOME = 'home',
+  CUSTOM = 'custom',
+}
+
+export enum StorefrontPageLifecycleStatus {
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
+  UNPUBLISHED = 'unpublished',
+}
+
 export enum StorefrontPageType {
   HOME = 'home',
   ABOUT = 'about',
@@ -41,6 +52,8 @@ export class StorefrontPage {
   @ManyToOne(() => StorefrontSite, { onDelete: 'CASCADE' })
   site: StorefrontSite;
   @Column({ type: 'varchar', length: 120 }) title: string;
+  @Column({ type: 'jsonb', default: () => `'{}'::jsonb` })
+  localizedTitle: Partial<Record<StorefrontLocale, string>>;
   @Column({ type: 'varchar', length: 80 }) slug: string;
   @Column({
     type: 'enum',
@@ -54,11 +67,21 @@ export class StorefrontPage {
     default: StorefrontPageStatus.DRAFT,
   })
   status: StorefrontPageStatus;
+  @Column({ type: 'enum', enum: StorefrontPageKind })
+  kind: StorefrontPageKind;
+  @Column({
+    type: 'enum',
+    enum: StorefrontPageLifecycleStatus,
+    default: StorefrontPageLifecycleStatus.DRAFT,
+  })
+  lifecycleStatus: StorefrontPageLifecycleStatus;
   @Column({ type: 'boolean', default: false }) isHomePage: boolean;
   @Column({ type: 'boolean', default: false }) includeInNavigation: boolean;
   @Column({ type: 'jsonb', default: () => `'{}'::jsonb` })
   navigationLabel: Partial<Record<StorefrontLocale, string>>;
   @Column({ type: 'int', default: 0 }) navigationOrder: number;
+  @Column({ type: 'boolean', default: false }) showInMenu: boolean;
+  @Column({ type: 'int', default: 0 }) menuOrder: number;
   @Column({ type: 'jsonb', default: () => `'["en"]'::jsonb` })
   enabledLocales: StorefrontLocale[];
   @Column({ type: 'jsonb', default: () => `'{}'::jsonb` })
@@ -71,6 +94,8 @@ export class StorefrontPage {
   @Column({ type: 'timestamp', nullable: true }) publishedAt: Date | null;
   @Column({ type: 'uuid', nullable: true }) createdBy: string | null;
   @Column({ type: 'uuid', nullable: true }) updatedBy: string | null;
+  @Column({ type: 'timestamp', nullable: true }) deletedAt: Date | null;
+  @Column({ type: 'timestamp', nullable: true }) purgeAfter: Date | null;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
 }

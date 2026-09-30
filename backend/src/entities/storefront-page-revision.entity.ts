@@ -19,12 +19,18 @@ export enum StorefrontRevisionOrigin {
   RESTORE = 'restore',
 }
 
+export enum StorefrontRevisionKind {
+  PUBLISHED = 'published',
+  CHECKPOINT = 'checkpoint',
+}
+
 @Entity('storefront_page_revisions')
 @Index(['pageId', 'createdAt'])
 export class StorefrontPageRevision {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({ type: 'uuid' }) organizationId: string;
-  @Column({ type: 'uuid' }) pageId: string;
+  @Column({ type: 'uuid', nullable: true }) siteId: string | null;
+  @Column({ type: 'uuid', nullable: true }) pageId: string | null;
   @ManyToOne(() => StorefrontPage, { onDelete: 'CASCADE' })
   page: StorefrontPage;
   @Column({ type: 'int' }) version: number;
@@ -39,6 +45,15 @@ export class StorefrontPageRevision {
     default: StorefrontRevisionOrigin.MANUAL,
   })
   origin: StorefrontRevisionOrigin;
+  @Column({
+    type: 'enum',
+    enum: StorefrontRevisionKind,
+    default: StorefrontRevisionKind.CHECKPOINT,
+  })
+  kind: StorefrontRevisionKind;
+  @Column({ type: 'varchar', length: 160, default: 'Checkpoint' })
+  label: string;
   @Column({ type: 'uuid', nullable: true }) authorId: string | null;
+  @Column({ type: 'uuid', nullable: true }) createdBy: string | null;
   @CreateDateColumn() createdAt: Date;
 }

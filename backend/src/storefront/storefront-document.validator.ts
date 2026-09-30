@@ -14,10 +14,16 @@ const SECTION_TYPES = new Set([
   'promotionalBanner',
   'imageText',
   'contactHours',
+  'category_nav',
+  'product_grid',
+  'promo_banner',
+  'image_text',
+  'text_block',
+  'contact_hours',
 ]);
 const HEX = /^#[0-9a-f]{6}$/i;
 const SAFE_PATH = /^\/(?!\/)[a-z0-9/_?#=&.%+-]*$/i;
-const SAFE_URL = /^https?:\/\//i;
+const SAFE_URL = /^https:\/\//i;
 const ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
 const record = (value: unknown): value is Record<string, any> =>
   !!value && typeof value === 'object' && !Array.isArray(value);
@@ -75,7 +81,36 @@ export function validateOrderSettings(
 }
 export function validateStorefrontDocument(
   value: unknown,
+  options: { publish?: boolean } = {},
 ): asserts value is StorefrontDocument {
+  if (record(value) && value.schemaVersion === 1) {
+    if (!Array.isArray(value.sections) || value.sections.length > 20)
+      throw new BadRequestException('A page can contain at most 20 sections');
+    const ids = new Set<string>();
+    for (const section of value.sections) {
+      if (!record(section) || !ID.test(section.id) || ids.has(section.id) || typeof section.type !== 'string' || typeof section.visible !== 'boolean')
+        throw new BadRequestException('Every section needs a unique valid id, type, and visibility');
+      ids.add(section.id);
+      if (!SECTION_TYPES.has(section.type)) continue;
+      if (JSON.stringify(section).length > 64 * 1024)
+        throw new BadRequestException(`Section ${section.id} is too large`);
+      if (options.publish && section.visible) {
+        const defaultText = (field: string) => localized(section[field], field === 'body' ? 2000 : 120, true);
+        if (['hero', 'promo_banner'].includes(section.type) && !defaultText('headline'))
+          throw new BadRequestException(`Section ${section.id} requires a headline`);
+        if (['image_text', 'text_block'].includes(section.type) && !defaultText('body'))
+          throw new BadRequestException(`Section ${section.id} requires body text`);
+        if (section.type === 'announcement' && !defaultText('text'))
+          throw new BadRequestException(`Section ${section.id} requires announcement text`);
+      }
+      const link = section.link || section.button?.link;
+      if (link && (!record(link) || !['page', 'catalog', 'product', 'category', 'url', 'phone', 'whatsapp', 'none'].includes(link.kind) || (link.kind === 'url' && !SAFE_URL.test(link.url || ''))))
+        throw new BadRequestException(`Section ${section.id} contains an invalid link`);
+    }
+    if (Buffer.byteLength(JSON.stringify(value), 'utf8') > 256 * 1024)
+      throw new BadRequestException('The page draft exceeds the 256 KB limit');
+    return;
+  }
   if (
     !record(value) ||
     value.version !== 1 ||
@@ -87,7 +122,7 @@ export function validateStorefrontDocument(
     !localized(value.footer.text, 300, true) ||
     typeof value.footer.showContact !== 'boolean' ||
     !Array.isArray(value.sections) ||
-    value.sections.length > 30
+    value.sections.length > 20
   )
     throw new BadRequestException('Storefront document structure is invalid');
   const ids = new Set<string>();
@@ -116,7 +151,7 @@ export function validateStorefrontDocument(
       throw new BadRequestException(
         `Section ${section.id} contains invalid localized text or links`,
       );
-    if (section.type === 'hero' && !localized(content.title, 160, true))
+    if (options.publish && section.type === 'hero' && !localized(content.title, 160, true))
       throw new BadRequestException(
         `Hero section ${section.id} requires an English title`,
       );
@@ -140,7 +175,7 @@ export function validateStorefrontDocument(
         `Product section ${section.id} has an invalid limit`,
       );
     if (
-      section.type === 'imageText' &&
+      options.publish && section.type === 'imageText' &&
       content.imageUrl &&
       !localized(content.imageAlt, 255, true)
     )
@@ -148,4 +183,6 @@ export function validateStorefrontDocument(
         `Image section ${section.id} requires English alternative text when an image is selected`,
       );
   }
+  if (Buffer.byteLength(JSON.stringify(value), 'utf8') > 256 * 1024)
+    throw new BadRequestException('The page draft exceeds the 256 KB limit');
 }

@@ -106,6 +106,19 @@ export class StorefrontAiService {
       this.config.get<string>('CMS_AI_MODEL')?.trim() || 'gpt-5.6-luna';
   }
 
+  async status(organizationId: string, userId: string) {
+    const site = await this.sites.findOne({ where: { organizationId } });
+    const enabled = this.config.get<string>('CMS_AI_ENABLED') !== 'false' && !!this.config.get<string>('AI_API_KEY')?.trim() && site?.aiEnabled !== false;
+    const month = new Date();
+    month.setUTCDate(1); month.setUTCHours(0, 0, 0, 0);
+    const [organizationUsage, userUsage] = await Promise.all([
+      this.suggestions.count({ where: { organizationId, createdAt: MoreThanOrEqual(month) } }),
+      this.suggestions.count({ where: { organizationId, userId, createdAt: MoreThanOrEqual(month) } }),
+    ]);
+    const resetAt = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 1));
+    return { enabled, action: enabled ? 'suggest' : 'use_example', organizationUsage, userUsage, organizationLimit: Number(this.config.get('CMS_AI_ORG_MONTHLY_LIMIT') || 2000), userLimit: Number(this.config.get('CMS_AI_USER_MONTHLY_LIMIT') || 500), resetAt };
+  }
+
   async outline(dto: CmsAiOutlineDto, organizationId: string, userId: string) {
     await this.limit(organizationId, userId);
     const context = await this.context(dto, organizationId);
