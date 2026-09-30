@@ -53,7 +53,7 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   longDescriptionBn: string | null;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ type: 'boolean', default: false })
   storefrontVisible: boolean;
 
   @Column({ type: 'varchar', length: 255, nullable: true })

@@ -43,15 +43,16 @@ async function bootstrap() {
 
   console.log('Allowed CORS origins:', [...allowedOrigins]);
 
-  app.enableCors({
-    origin: function (origin, callback) {
+  const cors = require('cors');
+  app.use(cors((request: any, done: (error: Error | null, options?: any) => void) => done(null, {
+    origin: function (origin: string | undefined, callback: (error: Error | null, allowed?: boolean) => void) {
       // Allow requests with no origin (like mobile apps, curl requests, Postman, payment gateways)
       if (!origin) return callback(null, true);
       
       if (allowedOrigins.has(origin)) {
         return callback(null, true);
       }
-      if (storefrontRootDomain) {
+      if (storefrontRootDomain && request.path.startsWith('/storefront/public/')) {
         try {
           const url = new URL(origin);
           const hostname = url.hostname.toLowerCase();
@@ -73,7 +74,7 @@ async function bootstrap() {
       'X-API-Version',
       'Idempotency-Key'
     ],
-  });
+  })));
 
   // Swagger documentation
   const config = new DocumentBuilder()

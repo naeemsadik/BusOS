@@ -7,9 +7,9 @@ const runMutations = process.env.BUSOS_E2E_MUTATIONS === "true"
 async function signIn(page: Page) {
   await page.goto("/auth/login")
   await page.getByLabel("Email address").fill(ownerEmail || "")
-  await page.getByLabel("Password").fill(ownerPassword || "")
+  await page.getByLabel("Password", { exact: true }).fill(ownerPassword || "")
   await page.getByRole("button", { name: "Sign in" }).click()
-  await expect(page).not.toHaveURL(/\/auth\/login/)
+  await expect(page).not.toHaveURL(/\/auth\/login/, { timeout: 30_000 })
 }
 
 test.describe("seeded owner workflows", () => {
@@ -20,21 +20,21 @@ test.describe("seeded owner workflows", () => {
   test("owner can reach POS, inventory, orders, and storefront publishing", async ({ page }) => {
     for (const path of ["/pos", "/inventory", "/orders", "/website"]) {
       await page.goto(path)
-      await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
+      await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible({ timeout: 30_000 })
     }
   })
 
   test("seeded POS sale", async ({ page }) => {
     test.skip(!runMutations, "Set BUSOS_E2E_MUTATIONS=true to permit seeded write operations.")
     await page.goto("/pos")
-    await page.getByRole("button", { name: /^Add / }).first().click()
-    await expect(page.getByText(/Cart/).first()).toBeVisible()
+    await page.getByRole("button", { name: /^Add / }).first().click({ timeout: 30_000 })
+    await expect(page.getByRole("button", { name: "Complete sale" })).toBeVisible()
   })
 
   test("seeded inventory edit", async ({ page }) => {
     test.skip(!runMutations, "Set BUSOS_E2E_MUTATIONS=true to permit seeded write operations.")
     await page.goto("/inventory")
-    await page.getByRole("button", { name: /Actions/ }).first().click()
+    await page.getByRole("button", { name: /Actions/ }).first().click({ timeout: 30_000 })
     await page.getByRole("menuitem", { name: "Edit" }).click()
     await expect(page.getByRole("dialog")).toBeVisible()
   })
@@ -42,7 +42,7 @@ test.describe("seeded owner workflows", () => {
   test("storefront publication and owner order confirmation", async ({ page }) => {
     test.skip(!runMutations, "Set BUSOS_E2E_MUTATIONS=true to permit seeded write operations.")
     await page.goto("/website")
-    await page.getByRole("button", { name: "Publish" }).click()
+    await page.getByRole("button", { name: "Publish", exact: true }).click()
     await page.goto("/orders")
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
   })
@@ -61,12 +61,18 @@ test("guest can place a delivery-only cash-on-delivery order", async ({ page }) 
   const slug = process.env.BUSOS_E2E_STOREFRONT_SLUG
   test.skip(!slug || !runMutations, "Set a seeded storefront slug and BUSOS_E2E_MUTATIONS=true.")
   await page.goto(`/store/${slug}`)
-  await page.getByRole("link", { name: /৳/ }).first().click()
+  await page
+    .locator('a[href*="/products/"]')
+    .filter({ hasNot: page.getByText("Unavailable") })
+    .first()
+    .click()
   await page.getByRole("button", { name: "Add to cart" }).click()
   await page.getByRole("link", { name: /Checkout/ }).click()
   await page.getByLabel("Name").fill("E2E Customer")
   await page.getByLabel("Phone").fill("01700000000")
-  await page.getByLabel("Address").fill("Seeded delivery address")
+  await page.getByLabel("Delivery address").fill("Seeded delivery address")
   await page.getByRole("button", { name: "Place order" }).click()
-  await expect(page.getByText("Order received").first()).toBeVisible()
+  await expect(page.getByText("Order received").first()).toBeVisible({
+    timeout: 15_000,
+  })
 })

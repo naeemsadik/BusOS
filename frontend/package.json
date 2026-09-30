@@ -11,7 +11,8 @@
     "start": "next start",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:list": "playwright test --list"
+    "test:e2e:list": "playwright test --list",
+    "test:demo": "playwright test --config playwright.demo.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.3.0",
@@ -97,6 +98,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^3.2.4",
     "jsdom": "^26.1.0",
     "postcss": "^8.5.23",
     "tailwindcss": "^3.4.17",

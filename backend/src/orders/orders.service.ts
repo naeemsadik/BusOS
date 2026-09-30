@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, Between, DataSource } from 'typeorm';
-import { Order, OrderItem, Product, Customer, OrderStatus, PaymentStatus, Organization, Invoice, InvoiceItem, InvoiceStatus, Delivery } from '../entities';
+import { Order, OrderItem, Product, Customer, OrderStatus, PaymentStatus, Organization, Invoice, InvoiceItem, InvoiceStatus, Delivery, OrderSource } from '../entities';
 import { CreateOrderDto, UpdateOrderDto, OrderQueryDto } from './dto';
 import { InvoicesService } from '../invoices/invoices.service';
 import { DeliveryService } from '../delivery/delivery.service';
@@ -34,6 +34,22 @@ export class OrdersService {
     private deliveryService: DeliveryService,
     private orderInventory: OrderInventoryService,
   ) {}
+
+  async storefrontUnseenCount(organizationId: string) {
+    const count = await this.orderRepository.count({
+      where: { organizationId, source: OrderSource.STOREFRONT, status: OrderStatus.PENDING, ownerSeenAt: null as any },
+    });
+    return { count };
+  }
+
+  async markSeen(id: string, organizationId: string) {
+    const result = await this.orderRepository.createQueryBuilder().update(Order)
+      .set({ ownerSeenAt: new Date() }).where('id = :id', { id })
+      .andWhere('"organizationId" = :organizationId', { organizationId })
+      .andWhere('source = :source', { source: OrderSource.STOREFRONT }).execute();
+    if (!result.affected) throw new NotFoundException('Online order not found');
+    return { seen: true };
+  }
 
   private async generateUniqueOrderNumber(organizationId: string): Promise<string> {
     // Use the same format as POS service: ORG-ORGID-YYYYMMDD-NNNN

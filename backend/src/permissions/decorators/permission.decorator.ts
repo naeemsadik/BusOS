@@ -5,5 +5,5 @@ export const REQUIRED_PERMISSION_KEY = 'requiredPermission';
 
 export const RequiredPermission = (
   module: PermissionModuleType, 
-  action: 'view' | 'create' | 'edit' | 'delete'
+  action: 'view' | 'create' | 'edit' | 'delete' | 'publish'
 ) => SetMetadata(REQUIRED_PERMISSION_KEY, { module, action });

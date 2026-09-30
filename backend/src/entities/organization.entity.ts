@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 import { Subscription } from './subscription.entity';
+import { StorefrontSite } from './storefront-site.entity';
 
 @Entity('organizations')
 export class Organization {
@@ -93,6 +94,9 @@ export class Organization {
   @OneToOne(() => Subscription, (subscription) => subscription.organization)
   @JoinColumn()
   subscription: Subscription;
+
+  @OneToOne(() => StorefrontSite, (site) => site.organization)
+  storefrontSite: StorefrontSite;
 
   @CreateDateColumn()
   createdAt: Date;

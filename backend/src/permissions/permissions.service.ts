@@ -72,7 +72,7 @@ export class PermissionsService {
     }
   }
 
-  async hasPermission(userId: string, module: PermissionModuleType, action: 'view' | 'create' | 'edit' | 'delete'): Promise<boolean> {
+  async hasPermission(userId: string, module: PermissionModuleType, action: 'view' | 'create' | 'edit' | 'delete' | 'publish'): Promise<boolean> {
     // First check if the user is an owner, owners have all permissions
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) return false;
@@ -94,6 +94,8 @@ export class PermissionsService {
         return permission.canEdit;
       case 'delete':
         return permission.canDelete;
+      case 'publish':
+        return module === PermissionModuleType.WEBSITE && permission.canDelete;
       default:
         return false;
     }

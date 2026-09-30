@@ -40,8 +40,9 @@ async function bootstrap() {
          AND table_name = ANY($2::text[])`,
       [schema, baseTables],
     );
+    const freshDatabase = knownTables.length === 0;
 
-    if (knownTables.length === 0) {
+    if (freshDatabase) {
       console.log('Empty database detected; creating the initial BusOS schema.');
       await dataSource.synchronize(false);
     } else if (knownTables.length !== baseTables.length) {
@@ -52,8 +53,15 @@ async function bootstrap() {
       );
     }
 
-    const migrations = await dataSource.runMigrations({ transaction: 'each' });
-    console.log(`Database ready; applied ${migrations.length} pending migration(s).`);
+    const migrations = await dataSource.runMigrations({
+      transaction: 'each',
+      fake: freshDatabase,
+    });
+    console.log(
+      freshDatabase
+        ? `Database ready; recorded ${migrations.length} migration(s) against the synchronized schema.`
+        : `Database ready; applied ${migrations.length} pending migration(s).`,
+    );
   } finally {
     if (dataSource.isInitialized) {
       await dataSource.destroy();

@@ -1,30 +1,36 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { PermissionModuleType, UserRole } from './lib/types';
-import { jwtDecode } from 'jwt-decode';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { PermissionModuleType, UserRole } from "./lib/types";
+import { jwtDecode } from "jwt-decode";
 
 // Define route permissions mapping
-const ROUTE_PERMISSIONS: Record<string, { module: PermissionModuleType, action: 'view' | 'create' | 'edit' | 'delete' }> = {
-  '/pos': { module: PermissionModuleType.POS, action: 'view' },
-  '/dashboard': { module: PermissionModuleType.DASHBOARD, action: 'view' },
-  '/inventory': { module: PermissionModuleType.INVENTORY, action: 'view' },
-  '/customers': { module: PermissionModuleType.CUSTOMERS, action: 'view' },
-  '/orders': { module: PermissionModuleType.ORDERS, action: 'view' },
-  '/expenses': { module: PermissionModuleType.EXPENSES, action: 'view' },
-  '/reports': { module: PermissionModuleType.REPORTS, action: 'view' },
-  '/settings': { module: PermissionModuleType.SETTINGS, action: 'view' },
-  '/social-content': { module: PermissionModuleType.SETTINGS, action: 'view' },
-  '/delivery': { module: PermissionModuleType.DELIVERY, action: 'view' },
-  '/suppliers': { module: PermissionModuleType.SUPPLIERS, action: 'view' },
-  '/sms': { module: PermissionModuleType.PAYMENTS, action: 'view' },
-  '/subscription': { module: PermissionModuleType.PAYMENTS, action: 'view' },
-  '/payments': { module: PermissionModuleType.PAYMENTS, action: 'view' },
-  '/website': { module: PermissionModuleType.WEBSITE, action: 'view' },
+const ROUTE_PERMISSIONS: Record<
+  string,
+  {
+    module: PermissionModuleType;
+    action: "view" | "create" | "edit" | "delete";
+  }
+> = {
+  "/pos": { module: PermissionModuleType.POS, action: "view" },
+  "/dashboard": { module: PermissionModuleType.DASHBOARD, action: "view" },
+  "/inventory": { module: PermissionModuleType.INVENTORY, action: "view" },
+  "/customers": { module: PermissionModuleType.CUSTOMERS, action: "view" },
+  "/orders": { module: PermissionModuleType.ORDERS, action: "view" },
+  "/expenses": { module: PermissionModuleType.EXPENSES, action: "view" },
+  "/reports": { module: PermissionModuleType.REPORTS, action: "view" },
+  "/settings": { module: PermissionModuleType.SETTINGS, action: "view" },
+  "/social-content": { module: PermissionModuleType.SETTINGS, action: "view" },
+  "/delivery": { module: PermissionModuleType.DELIVERY, action: "view" },
+  "/suppliers": { module: PermissionModuleType.SUPPLIERS, action: "view" },
+  "/sms": { module: PermissionModuleType.PAYMENTS, action: "view" },
+  "/subscription": { module: PermissionModuleType.PAYMENTS, action: "view" },
+  "/payments": { module: PermissionModuleType.PAYMENTS, action: "view" },
+  "/website": { module: PermissionModuleType.WEBSITE, action: "view" },
 };
 
 // Module priority order for redirecting to first permitted page (most common/important modules first)
 const MODULE_PRIORITY: PermissionModuleType[] = [
-  PermissionModuleType.POS, 
+  PermissionModuleType.POS,
   PermissionModuleType.DASHBOARD,
   PermissionModuleType.INVENTORY,
   PermissionModuleType.ORDERS,
@@ -43,7 +49,7 @@ interface DecodedToken {
   email: string;
   role: UserRole;
   organizationId: string;
-  permissions?: { module: string, canView: boolean }[];
+  permissions?: { module: string; canView: boolean }[];
   iat: number;
   exp: number;
 }
@@ -52,54 +58,76 @@ interface DecodedToken {
 export async function middleware(request: NextRequest) {
   // Get the path of the request
   const path = request.nextUrl.pathname;
-  const host = (request.headers.get('host') || '').split(':')[0].toLowerCase();
-  const rootDomain = (process.env.STOREFRONT_ROOT_DOMAIN || (process.env.NODE_ENV === 'production' ? '' : 'localhost')).toLowerCase();
+  const hostHeader = (request.headers.get("host") || "").toLowerCase();
+  const [host, port] = hostHeader.split(":");
+  const rootDomain = (
+    process.env.STOREFRONT_ROOT_DOMAIN ||
+    (process.env.NODE_ENV === "production" ? "" : "localhost")
+  )
+    .split(":")[0]
+    .toLowerCase();
   if (rootDomain && host.endsWith(`.${rootDomain}`)) {
+    if (process.env.NODE_ENV !== "production" && port && port !== "3000")
+      return new NextResponse("Storefront not found", { status: 404 });
     const slug = host.slice(0, -(rootDomain.length + 1));
-    if (!/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$/.test(slug) || ['www', 'admin', 'api', 'app'].includes(slug)) return new NextResponse('Storefront not found', { status: 404 })
-    if (path.startsWith('/backend-api') || path.startsWith('/_next') || path.startsWith('/api/')) return NextResponse.next()
+    if (
+      !/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$/.test(slug) ||
+      ["www", "admin", "api", "app"].includes(slug)
+    )
+      return new NextResponse("Storefront not found", { status: 404 });
+    if (
+      path.startsWith("/backend-api") ||
+      path.startsWith("/_next") ||
+      path.startsWith("/api/")
+    )
+      return NextResponse.next();
     const url = request.nextUrl.clone();
-    url.pathname = `/store/${slug}${path === '/' ? '' : path}`;
+    url.pathname = `/store/${slug}${path === "/" ? "" : path}`;
     return NextResponse.rewrite(url);
   }
-  
+
   // Special handling for root path
-  if (path === '/') {
+  if (path === "/") {
     // For root path, let the component handle routing
     // This allows showing landing page for unauthenticated users
     // and auto-redirecting authenticated users in the component
     return NextResponse.next();
   }
-  
+
   // Skip checking for excluded paths
-  if (path.startsWith('/auth') || 
-      path.startsWith('/api') || 
-      path.startsWith('/backend-api') ||
-      path.startsWith('/_next') ||
-      path.startsWith('/store/') ||
-      path === '/access-denied') {
+  if (
+    path.startsWith("/auth") ||
+    path.startsWith("/api") ||
+    path.startsWith("/backend-api") ||
+    path.startsWith("/_next") ||
+    path.startsWith("/store/") ||
+    path === "/access-denied"
+  ) {
     return NextResponse.next();
   }
 
   // Get the token from the request
-  const token = request.cookies.get('access_token')?.value;
+  const token = request.cookies.get("access_token")?.value;
 
   if (!token) {
     // Redirect to login if there is no token
-    return NextResponse.redirect(new URL('/auth/login', request.url));
+    return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 
   try {
     // Decode token to get user info
     const decodedToken = jwtDecode<DecodedToken>(token);
-    
+
     // Token expired
     if (decodedToken.exp * 1000 < Date.now()) {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
+      return NextResponse.redirect(new URL("/auth/login", request.url));
     }
 
     // Owners and admins always have access to all modules
-    if (decodedToken.role === UserRole.OWNER || decodedToken.role === UserRole.ADMIN) {
+    if (
+      decodedToken.role === UserRole.OWNER ||
+      decodedToken.role === UserRole.ADMIN
+    ) {
       return NextResponse.next();
     }
 
@@ -108,20 +136,18 @@ export async function middleware(request: NextRequest) {
     if (decodedToken.role === UserRole.STAFF) {
       return NextResponse.next();
     }
-    
+
     // For owners and admins, we already allowed access above
     // This is just a fallback check that shouldn't be reached
     return NextResponse.next();
   } catch (error) {
-    console.error('Middleware error:', error);
+    console.error("Middleware error:", error);
     // On any error, redirect to login to be safe
-    return NextResponse.redirect(new URL('/auth/login', request.url));
+    return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 }
 
 // Configure the middleware to run on specific paths
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

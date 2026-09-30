@@ -1,18 +1,49 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { useState, useEffect, useRef } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Search,
   Plus,
@@ -34,15 +65,15 @@ import {
   Trash2,
   RefreshCw,
   DollarSign,
-} from "lucide-react"
-import { ordersService, Order, OrderQuery } from "@/lib/orders-service"
-import { deliveryService } from "@/lib/delivery-service"
-import { paperflySyncService } from "@/lib/paperfly-sync-service"
-import { smsService } from "@/lib/sms-service"
-import { useToast } from "@/hooks/use-toast"
-import OrdersPDFExport from "@/components/orders/orders-pdf-export"
-import OrderDetailsDialog from "@/components/orders/order-details-dialog"
-import OrderEditDialog from "@/components/orders/order-edit-dialog"
+} from "lucide-react";
+import { ordersService, Order, OrderQuery } from "@/lib/orders-service";
+import { deliveryService } from "@/lib/delivery-service";
+import { paperflySyncService } from "@/lib/paperfly-sync-service";
+import { smsService } from "@/lib/sms-service";
+import { useToast } from "@/hooks/use-toast";
+import OrdersPDFExport from "@/components/orders/orders-pdf-export";
+import OrderDetailsDialog from "@/components/orders/order-details-dialog";
+import OrderEditDialog from "@/components/orders/order-edit-dialog";
 import {
   Pagination,
   PaginationContent,
@@ -51,264 +82,356 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination"
-import { brandConfig } from "@/lib/brand-config"
-import PermissionGuardPage from "@/components/permission-guard-page"
-import { PermissionModuleType } from "@/lib/types"
-import { useLocale, useTranslations } from "next-intl"
-import { useCurrency } from "@/contexts/currency-context"
-import { MetricCard, PageHeader, PageSkeleton, PageToolbar, StatusBadge } from "@/components/ui/page-primitives"
+} from "@/components/ui/pagination";
+import { brandConfig } from "@/lib/brand-config";
+import PermissionGuardPage from "@/components/permission-guard-page";
+import { PermissionModuleType } from "@/lib/types";
+import { useLocale, useTranslations } from "next-intl";
+import { useCurrency } from "@/contexts/currency-context";
+import {
+  MetricCard,
+  PageHeader,
+  PageSkeleton,
+  PageToolbar,
+  StatusBadge,
+} from "@/components/ui/page-primitives";
 
 export function OrdersPage() {
   return (
     <PermissionGuardPage module={PermissionModuleType.ORDERS}>
       <OrdersPageContent />
     </PermissionGuardPage>
-  )
+  );
 }
 
 function OrdersPageContent() {
-  const t = useTranslations("orders")
-  const locale = useLocale()
-  const { formatCurrency } = useCurrency()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [orders, setOrders] = useState<Order[]>([])
-  const [activeTab, setActiveTab] = useState("all")
-  const [sourceFilter, setSourceFilter] = useState("all")
-  const [newStorefrontOrders, setNewStorefrontOrders] = useState(0)
-  const knownStorefrontOrderIds = useRef<Set<string> | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
-  const [showViewDialog, setShowViewDialog] = useState(false)
-  const [showEditDialog, setShowEditDialog] = useState(false)
-  const [showTrackDialog, setShowTrackDialog] = useState(false)
-  const [sendingSMS, setSendingSMS] = useState(false)
-  const [savingOrder, setSavingOrder] = useState(false)
+  const t = useTranslations("orders");
+  const locale = useLocale();
+  const { formatCurrency } = useCurrency();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [activeTab, setActiveTab] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
+  const [newStorefrontOrders, setNewStorefrontOrders] = useState(0);
+  const [storefrontPollingOffline, setStorefrontPollingOffline] =
+    useState(false);
+  const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showTrackDialog, setShowTrackDialog] = useState(false);
+  const [sendingSMS, setSendingSMS] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   // Paperfly tracking dialog
-  const [showPaperflyDialog, setShowPaperflyDialog] = useState(false)
-  const [paperflyTrackingData, setPaperflyTrackingData] = useState<any>(null)
-  const [loadingPaperflyData, setLoadingPaperflyData] = useState(false)
+  const [showPaperflyDialog, setShowPaperflyDialog] = useState(false);
+  const [paperflyTrackingData, setPaperflyTrackingData] = useState<any>(null);
+  const [loadingPaperflyData, setLoadingPaperflyData] = useState(false);
 
   // Pathao tracking state
-  const [pathaoTracking, setPathaoTracking] = useState<any>(null)
-  const [loadingPathao, setLoadingPathao] = useState(false)
+  const [pathaoTracking, setPathaoTracking] = useState<any>(null);
+  const [loadingPathao, setLoadingPathao] = useState(false);
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalOrders, setTotalOrders] = useState(0)
-  const [pageSize, setPageSize] = useState(25)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [pageSize, setPageSize] = useState(25);
 
   // Bulk operations
-  const [selectedOrders, setSelectedOrders] = useState<string[]>([])
-  const [showBulkSMSDialog, setShowBulkSMSDialog] = useState(false)
-  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
-  const [bulkSMSMessage, setBulkSMSMessage] = useState("")
-  const [bulkSMSType, setBulkSMSType] = useState<"invoice" | "confirmation" | "custom">("confirmation")
-  const [sendingBulkSMS, setSendingBulkSMS] = useState(false)
-  const [deletingOrders, setDeletingOrders] = useState(false)
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+  const [showBulkSMSDialog, setShowBulkSMSDialog] = useState(false);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [bulkSMSMessage, setBulkSMSMessage] = useState("");
+  const [bulkSMSType, setBulkSMSType] = useState<
+    "invoice" | "confirmation" | "custom"
+  >("confirmation");
+  const [sendingBulkSMS, setSendingBulkSMS] = useState(false);
+  const [deletingOrders, setDeletingOrders] = useState(false);
 
   // Advanced filtering states
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
-  const [dateFrom, setDateFrom] = useState("")
-  const [dateTo, setDateTo] = useState("")
-  const [amountFrom, setAmountFrom] = useState("")
-  const [amountTo, setAmountTo] = useState("")
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState("all")
-  const [customerFilter, setCustomerFilter] = useState("")
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [amountFrom, setAmountFrom] = useState("");
+  const [amountTo, setAmountTo] = useState("");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
+  const [customerFilter, setCustomerFilter] = useState("");
 
-  const { toast } = useToast()
+  const { toast } = useToast();
 
   const openExternalUrl = (url: URL) => {
-    window.open(url.toString(), "_blank", "noopener,noreferrer")
-  }
+    window.open(url.toString(), "_blank", "noopener,noreferrer");
+  };
 
   const openPaperflyTrackingPage = (order: Order) => {
-    const trackingReference = order.paperflyOrderNumber || order.trackingNumber
+    const trackingReference = order.paperflyOrderNumber || order.trackingNumber;
     if (!trackingReference) {
-      return
+      return;
     }
 
-    const url = new URL("https://go.paperfly.com.bd/track/order/")
-    url.pathname = ["/track/order", encodeURIComponent(trackingReference)].join("/")
-    openExternalUrl(url)
-  }
+    const url = new URL("https://go.paperfly.com.bd/track/order/");
+    url.pathname = ["/track/order", encodeURIComponent(trackingReference)].join(
+      "/",
+    );
+    openExternalUrl(url);
+  };
 
   const openSteadfastPortal = () => {
-    openExternalUrl(new URL("https://portal.packzy.com/"))
-  }
+    openExternalUrl(new URL("https://portal.packzy.com/"));
+  };
 
-  const openCourierSearch = (courierService: string, trackingNumber: string) => {
-    const url = new URL("https://www.google.com/search")
-    url.searchParams.set("q", [courierService, "tracking", trackingNumber].join(" "))
-    openExternalUrl(url)
-  }
+  const openCourierSearch = (
+    courierService: string,
+    trackingNumber: string,
+  ) => {
+    const url = new URL("https://www.google.com/search");
+    url.searchParams.set(
+      "q",
+      [courierService, "tracking", trackingNumber].join(" "),
+    );
+    openExternalUrl(url);
+  };
 
   const openPaperflyMerchantTracking = (orderNumber: string) => {
     if (!orderNumber) {
-      return
+      return;
     }
 
-    const url = new URL("https://go-app.paperfly.com.bd/merchant/api/react/order/track_order.php")
-    url.searchParams.set("order_number", orderNumber)
-    openExternalUrl(url)
-  }
+    const url = new URL(
+      "https://go-app.paperfly.com.bd/merchant/api/react/order/track_order.php",
+    );
+    url.searchParams.set("order_number", orderNumber);
+    openExternalUrl(url);
+  };
 
   // Helper function to build current query
   const buildCurrentQuery = (): OrderQuery => {
     const query: OrderQuery = {
       page: currentPage,
       limit: pageSize,
-    }
+    };
 
-    if (searchTerm.trim()) query.search = searchTerm.trim()
-    if (activeTab !== "all") query.status = activeTab
-    if (paymentStatusFilter !== "all") query.paymentStatus = paymentStatusFilter
-    if (sourceFilter !== "all") query.source = sourceFilter
-    if (dateFrom) query.startDate = dateFrom
-    if (dateTo) query.endDate = dateTo
-    if (amountFrom) query.minAmount = parseFloat(amountFrom)
-    if (amountTo) query.maxAmount = parseFloat(amountTo)
-    if (customerFilter.trim()) query.search = customerFilter.trim()
+    if (searchTerm.trim()) query.search = searchTerm.trim();
+    if (activeTab !== "all") query.status = activeTab;
+    if (paymentStatusFilter !== "all")
+      query.paymentStatus = paymentStatusFilter;
+    if (sourceFilter !== "all") query.source = sourceFilter;
+    if (dateFrom) query.startDate = dateFrom;
+    if (dateTo) query.endDate = dateTo;
+    if (amountFrom) query.minAmount = parseFloat(amountFrom);
+    if (amountTo) query.maxAmount = parseFloat(amountTo);
+    if (customerFilter.trim()) query.search = customerFilter.trim();
 
-    return query
-  }
+    return query;
+  };
 
   // Helper function to refresh orders with current filters
   const refreshOrders = async () => {
     try {
-      setLoading(true)
-      const query = buildCurrentQuery()
-      const response = await ordersService.getOrders(query)
-      setOrders(response.orders)
-      setTotalOrders(response.total)
-      setTotalPages(response.totalPages)
-      setSelectedOrders([])
+      setLoading(true);
+      const query = buildCurrentQuery();
+      const response = await ordersService.getOrders(query);
+      setOrders(response.orders);
+      setTotalOrders(response.total);
+      setTotalPages(response.totalPages);
+      setSelectedOrders([]);
     } catch (error) {
-      console.error('Failed to refresh orders:', error)
+      console.error("Failed to refresh orders:", error);
       toast({
         title: "Error",
         description: "Failed to refresh orders. Please try again.",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Function to refresh orders with custom query for PDF export
-  const refreshOrdersWithQuery = async (query: OrderQuery): Promise<{ orders: Order[], total: number, totalPages: number }> => {
+  const refreshOrdersWithQuery = async (
+    query: OrderQuery,
+  ): Promise<{ orders: Order[]; total: number; totalPages: number }> => {
     try {
-      const response = await ordersService.getOrders(query)
+      const response = await ordersService.getOrders(query);
       return {
         orders: response.orders,
         total: response.total,
-        totalPages: response.totalPages
-      }
+        totalPages: response.totalPages,
+      };
     } catch (error) {
-      console.error('Failed to fetch orders for export:', error)
-      throw error
+      console.error("Failed to fetch orders for export:", error);
+      throw error;
     }
-  }
+  };
 
   // Load orders data with pagination and filtering
   useEffect(() => {
     const loadOrders = async () => {
       try {
-        setLoading(true)
+        setLoading(true);
 
-        const query = buildCurrentQuery()
-        const response = await ordersService.getOrders(query)
-        setOrders(response.orders)
-        setTotalOrders(response.total)
-        setTotalPages(response.totalPages)
+        const query = buildCurrentQuery();
+        const response = await ordersService.getOrders(query);
+        setOrders(response.orders);
+        setTotalOrders(response.total);
+        setTotalPages(response.totalPages);
 
         // Clear selected orders when data changes
-        setSelectedOrders([])
+        setSelectedOrders([]);
       } catch (error) {
-        console.error('Failed to load orders:', error)
+        console.error("Failed to load orders:", error);
         toast({
           title: "Error",
           description: "Failed to load orders. Please refresh the page.",
-          variant: "destructive"
-        })
+          variant: "destructive",
+        });
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadOrders()
-  }, [currentPage, pageSize, searchTerm, activeTab, sourceFilter, paymentStatusFilter, dateFrom, dateTo, amountFrom, amountTo, customerFilter, toast])
+    loadOrders();
+  }, [
+    currentPage,
+    pageSize,
+    searchTerm,
+    activeTab,
+    sourceFilter,
+    paymentStatusFilter,
+    dateFrom,
+    dateTo,
+    amountFrom,
+    amountTo,
+    customerFilter,
+    toast,
+  ]);
 
   // Reset to first page when filters change
   useEffect(() => {
     if (currentPage !== 1) {
-      setCurrentPage(1)
+      setCurrentPage(1);
     }
-  }, [searchTerm, activeTab, sourceFilter, paymentStatusFilter, dateFrom, dateTo, amountFrom, amountTo, customerFilter])
+  }, [
+    searchTerm,
+    activeTab,
+    sourceFilter,
+    paymentStatusFilter,
+    dateFrom,
+    dateTo,
+    amountFrom,
+    amountTo,
+    customerFilter,
+  ]);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
+    let timer: number | undefined;
+    let delay = 30_000;
     const poll = async () => {
-      if (document.visibilityState === "hidden") return
-      try {
-        const response = await ordersService.getOrders({ source: "storefront", page: 1, limit: 10 })
-        if (cancelled) return
-        const latestIds = new Set(response.orders.map(order => order.id))
-        if (knownStorefrontOrderIds.current) {
-          const additions = response.orders.filter(order => !knownStorefrontOrderIds.current!.has(order.id)).length
-          if (additions) setNewStorefrontOrders(count => count + additions)
-        }
-        knownStorefrontOrderIds.current = latestIds
-      } catch {
-        // The normal page error handling remains authoritative; polling is best-effort.
+      if (document.visibilityState === "hidden") {
+        timer = window.setTimeout(poll, 30_000);
+        return;
       }
-    }
-    void poll()
-    const interval = window.setInterval(poll, 15_000)
-    return () => { cancelled = true; window.clearInterval(interval) }
-  }, [])
+      try {
+        const count = await ordersService.getStorefrontUnseenCount();
+        if (cancelled) return;
+        setNewStorefrontOrders(count);
+        setStorefrontPollingOffline(false);
+        delay = 30_000;
+      } catch {
+        setStorefrontPollingOffline(true);
+        delay = Math.min(delay * 2, 120_000);
+      }
+      timer = window.setTimeout(poll, delay);
+    };
+    void poll();
+    const focus = () => {
+      if (timer) window.clearTimeout(timer);
+      delay = 30_000;
+      void poll();
+    };
+    window.addEventListener("focus", focus);
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+      window.removeEventListener("focus", focus);
+    };
+  }, []);
+
+  useEffect(() => {
+    const base = document.title.replace(/^\(\d+\)\s*/, "");
+    document.title = newStorefrontOrders
+      ? `(${newStorefrontOrders}) ${base}`
+      : base;
+    return () => {
+      document.title = base;
+    };
+  }, [newStorefrontOrders]);
 
   // Helper functions for pagination
   const handlePageChange = (page: number) => {
-    setCurrentPage(page)
-  }
+    setCurrentPage(page);
+  };
 
   const handlePageSizeChange = (size: number) => {
-    setPageSize(size)
-    setCurrentPage(1) // Reset to first page when changing page size
-  }
+    setPageSize(size);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
 
   const getStatusBadge = (status: string) => {
-    const tones: Record<string, "neutral" | "info" | "success" | "warning" | "danger"> = {
-      pending: "warning", confirmed: "info", processing: "info", shipped: "info",
-      delivered: "success", cancelled: "danger", returned: "danger",
-    }
-    return <StatusBadge tone={tones[status] || "neutral"}>{status.charAt(0).toUpperCase() + status.slice(1)}</StatusBadge>
-  }
+    const tones: Record<
+      string,
+      "neutral" | "info" | "success" | "warning" | "danger"
+    > = {
+      pending: "warning",
+      confirmed: "info",
+      processing: "info",
+      shipped: "info",
+      delivered: "success",
+      cancelled: "danger",
+      returned: "danger",
+    };
+    return (
+      <StatusBadge tone={tones[status] || "neutral"}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </StatusBadge>
+    );
+  };
 
   const getPaymentBadge = (status: string) => {
-    const tones: Record<string, "neutral" | "info" | "success" | "warning" | "danger"> = {
-      paid: "success", pending: "warning", partial: "warning", failed: "danger", refunded: "neutral", cod: "info",
-    }
-    return <StatusBadge tone={tones[status] || "neutral"}>{status.charAt(0).toUpperCase() + status.slice(1)}</StatusBadge>
-  }
+    const tones: Record<
+      string,
+      "neutral" | "info" | "success" | "warning" | "danger"
+    > = {
+      paid: "success",
+      pending: "warning",
+      partial: "warning",
+      failed: "danger",
+      refunded: "neutral",
+      cod: "info",
+    };
+    return (
+      <StatusBadge tone={tones[status] || "neutral"}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </StatusBadge>
+    );
+  };
 
   const handleSendInvoiceSMS = async (order: Order) => {
     if (!order.customerPhone) {
       toast({
         title: "Error",
         description: "Customer phone number is not available",
-        variant: "destructive"
-      })
-      return
+        variant: "destructive",
+      });
+      return;
     }
 
-    setSendingSMS(true)
+    setSendingSMS(true);
     try {
       // Enhanced invoice SMS with more details
-      const message = `Dear ${order.customerName || 'Customer'},
+      const message = `Dear ${order.customerName || "Customer"},
 
 Your invoice for Order #${order.orderNumber} is ready:
 
@@ -320,64 +443,66 @@ Order Status: ${order.status.toUpperCase()}
 Thank you for your order!
 
 Best regards,
-${brandConfig.name}`
+${brandConfig.name}`;
 
       const result = await smsService.sendSms({
         recipient: order.customerPhone,
         message,
-        type: 'Invoice'
-      })
+        type: "Invoice",
+      });
 
       if (result.success) {
         toast({
           title: "Success",
           description: "Invoice SMS sent successfully to customer",
-        })
+        });
       } else {
         toast({
           title: "Error",
           description: "Failed to send SMS to customer",
-          variant: "destructive"
-        })
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
       toast({
         title: "Error",
         description: "Failed to send SMS",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setSendingSMS(false)
+      setSendingSMS(false);
     }
-  }
+  };
 
   // Bulk operations functions
   const handleSelectOrder = (orderId: string, checked: boolean) => {
     if (checked) {
-      setSelectedOrders(prev => [...prev, orderId])
+      setSelectedOrders((prev) => [...prev, orderId]);
     } else {
-      setSelectedOrders(prev => prev.filter(id => id !== orderId))
+      setSelectedOrders((prev) => prev.filter((id) => id !== orderId));
     }
-  }
+  };
 
   const handleSelectAllOrders = (checked: boolean) => {
     if (checked) {
-      setSelectedOrders(visibleOrders.map(order => order.id))
+      setSelectedOrders(visibleOrders.map((order) => order.id));
     } else {
-      setSelectedOrders([])
+      setSelectedOrders([]);
     }
-  }
+  };
 
   const handleBulkPrint = () => {
-    const selectedOrdersData = orders.filter(order => selectedOrders.includes(order.id))
+    const selectedOrdersData = orders.filter((order) =>
+      selectedOrders.includes(order.id),
+    );
 
     if (selectedOrdersData.length === 0) {
       toast({
         title: "Error",
         description: "Please select orders to print",
-        variant: "destructive"
-      })
-      return
+        variant: "destructive",
+      });
+      return;
     }
 
     // Generate combined invoice content for all selected orders
@@ -467,27 +592,31 @@ ${brandConfig.name}`
 <body>
 
     <div class="page">
-      ${selectedOrdersData.map(order => `
+      ${selectedOrdersData
+        .map(
+          (order) => `
       <!-- START SLIP -->
       <div class="slip">
       <div>
         <div class="header">${brandConfig.name}</div>
         <div class="info">
         <p><span class="label">Order ID:</span> ${order.orderNumber}</p>
-        <p><span class="label">Name:</span> ${order.customerName || order.customer?.name || 'N/A'}</p>
-        <p><span class="label">Phone:</span> ${order.customerPhone || order.customer?.phone || 'N/A'}</p>
-        <p><span class="label">Address:</span> ${order.shippingAddress || 'N/A'}</p>
+        <p><span class="label">Name:</span> ${order.customerName || order.customer?.name || "N/A"}</p>
+        <p><span class="label">Phone:</span> ${order.customerPhone || order.customer?.phone || "N/A"}</p>
+        <p><span class="label">Address:</span> ${order.shippingAddress || "N/A"}</p>
         </div>
-        <div class="product">${order.items.map(item => item.productName).join(', ')}</div>
-        <div class="amount">৳${order.total.toLocaleString()} ${order.paymentStatus === 'paid' ? 'PAID' : 'DUE'}</div>
+        <div class="product">${order.items.map((item) => item.productName).join(", ")}</div>
+        <div class="amount">৳${order.total.toLocaleString()} ${order.paymentStatus === "paid" ? "PAID" : "DUE"}</div>
       </div>
       <div class="footer">
-        Merchant Copy • ${new Date(order.createdAt).toLocaleDateString('en-GB')} – ${new Date(order.createdAt).toLocaleTimeString()}<br>
+        Merchant Copy • ${new Date(order.createdAt).toLocaleDateString("en-GB")} – ${new Date(order.createdAt).toLocaleTimeString()}<br>
         Thank you for shopping with us.
       </div>
       </div>
       <!-- END SLIP -->
-      `).join('')}
+      `,
+        )
+        .join("")}
     </div>
 
     <script>
@@ -496,190 +625,216 @@ ${brandConfig.name}`
 
     </body>
     </html>
-      `
+      `;
 
-    const printWindow = window.open('', '_blank')
+    const printWindow = window.open("", "_blank");
     if (printWindow) {
-      printWindow.document.write(combinedInvoiceContent)
-      printWindow.document.close()
+      printWindow.document.write(combinedInvoiceContent);
+      printWindow.document.close();
       toast({
         title: "Success",
         description: `Opening print dialog for ${selectedOrdersData.length} professional invoices...`,
-      })
+      });
     } else {
       toast({
         title: "Error",
-        description: "Could not open print window. Please check your browser's popup settings.",
-        variant: "destructive"
-      })
+        description:
+          "Could not open print window. Please check your browser's popup settings.",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const handleBulkSMS = () => {
-    const selectedOrdersData = orders.filter(order => selectedOrders.includes(order.id))
+    const selectedOrdersData = orders.filter((order) =>
+      selectedOrders.includes(order.id),
+    );
 
     if (selectedOrdersData.length === 0) {
       toast({
         title: "Error",
         description: "Please select orders to send SMS",
-        variant: "destructive"
-      })
-      return
+        variant: "destructive",
+      });
+      return;
     }
 
     // Check if all selected orders have phone numbers
-    const ordersWithoutPhone = selectedOrdersData.filter(order => !order.customerPhone)
+    const ordersWithoutPhone = selectedOrdersData.filter(
+      (order) => !order.customerPhone,
+    );
     if (ordersWithoutPhone.length > 0) {
       toast({
         title: "Warning",
         description: `${ordersWithoutPhone.length} orders don't have phone numbers and will be skipped`,
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     }
 
     // Set default message based on type
     if (bulkSMSType === "confirmation") {
-      setBulkSMSMessage("Dear {customerName}, your order #{orderNumber} has been confirmed and is being processed. Thank you for your business!")
+      setBulkSMSMessage(
+        "Dear {customerName}, your order #{orderNumber} has been confirmed and is being processed. Thank you for your business!",
+      );
     } else if (bulkSMSType === "invoice") {
-      setBulkSMSMessage("Dear {customerName}, your invoice for order #{orderNumber} (Amount: {total}) is ready. Thank you for your business!")
+      setBulkSMSMessage(
+        "Dear {customerName}, your invoice for order #{orderNumber} (Amount: {total}) is ready. Thank you for your business!",
+      );
     }
 
-    setShowBulkSMSDialog(true)
-  }
+    setShowBulkSMSDialog(true);
+  };
 
   const sendBulkSMS = async () => {
-    const selectedOrdersData = orders.filter(order => selectedOrders.includes(order.id) && order.customerPhone)
+    const selectedOrdersData = orders.filter(
+      (order) => selectedOrders.includes(order.id) && order.customerPhone,
+    );
 
     if (selectedOrdersData.length === 0) {
       toast({
         title: "Error",
         description: "No orders with phone numbers selected",
-        variant: "destructive"
-      })
-      return
+        variant: "destructive",
+      });
+      return;
     }
 
-    setSendingBulkSMS(true)
-    let successCount = 0
-    let failCount = 0
+    setSendingBulkSMS(true);
+    let successCount = 0;
+    let failCount = 0;
 
     try {
       for (const order of selectedOrdersData) {
         try {
-          let message = bulkSMSMessage
+          let message = bulkSMSMessage;
 
           // Replace placeholders in message
           message = message
-            .replace('{customerName}', order.customerName || 'Customer')
-            .replace('{orderNumber}', order.orderNumber)
-            .replace('{total}', `৳${order.total.toLocaleString()}`)
-            .replace('{status}', order.status.toUpperCase())
-            .replace('{paymentStatus}', order.paymentStatus.toUpperCase())
+            .replace("{customerName}", order.customerName || "Customer")
+            .replace("{orderNumber}", order.orderNumber)
+            .replace("{total}", `৳${order.total.toLocaleString()}`)
+            .replace("{status}", order.status.toUpperCase())
+            .replace("{paymentStatus}", order.paymentStatus.toUpperCase());
 
           const result = await smsService.sendSms({
             recipient: order.customerPhone!,
             message,
-            type: bulkSMSType === "invoice" ? "promotional" : "transactional"
-          })
+            type: bulkSMSType === "invoice" ? "promotional" : "transactional",
+          });
 
           if (result.success) {
-            successCount++
+            successCount++;
           } else {
-            failCount++
+            failCount++;
           }
 
           // Small delay between SMS to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 500))
+          await new Promise((resolve) => setTimeout(resolve, 500));
         } catch (error) {
-          failCount++
+          failCount++;
         }
       }
 
       toast({
         title: "Bulk SMS Complete",
         description: `Successfully sent: ${successCount}, Failed: ${failCount}`,
-        variant: successCount > 0 ? "default" : "destructive"
-      })
+        variant: successCount > 0 ? "default" : "destructive",
+      });
 
-      setShowBulkSMSDialog(false)
-      setSelectedOrders([])
-      setBulkSMSMessage("")
+      setShowBulkSMSDialog(false);
+      setSelectedOrders([]);
+      setBulkSMSMessage("");
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to send bulk SMS",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setSendingBulkSMS(false)
+      setSendingBulkSMS(false);
     }
-  }
+  };
 
   const handleBulkDelete = async () => {
-    const selectedOrdersData = orders.filter(order => selectedOrders.includes(order.id))
+    const selectedOrdersData = orders.filter((order) =>
+      selectedOrders.includes(order.id),
+    );
 
     if (selectedOrdersData.length === 0) {
       toast({
         title: "Error",
         description: "Please select orders to delete",
-        variant: "destructive"
-      })
-      return
+        variant: "destructive",
+      });
+      return;
     }
 
     // Add confirmation dialog for bulk delete
-    if (!window.confirm('Are you sure you want to delete the selected orders? This action cannot be undone.')) {
-      return
+    if (
+      !window.confirm(
+        "Are you sure you want to delete the selected orders? This action cannot be undone.",
+      )
+    ) {
+      return;
     }
 
-    setDeletingOrders(true)
-    const successfulOrderIds: string[] = []
-    const failedOrderIds: string[] = []
+    setDeletingOrders(true);
+    const successfulOrderIds: string[] = [];
+    const failedOrderIds: string[] = [];
 
     try {
       // Process orders in batches for better performance
-      const batchSize = 5
-      const pendingOrders = [...selectedOrdersData]
+      const batchSize = 5;
+      const pendingOrders = [...selectedOrdersData];
       while (pendingOrders.length > 0) {
-        const batch = pendingOrders.splice(0, batchSize)
+        const batch = pendingOrders.splice(0, batchSize);
         await Promise.all(
           batch.map(async (order) => {
             try {
-              await ordersService.deleteOrder(order.id, order.customerId || '', order.total)
-              successfulOrderIds.push(order.id)
+              await ordersService.deleteOrder(
+                order.id,
+                order.customerId || "",
+                order.total,
+              );
+              successfulOrderIds.push(order.id);
             } catch {
-              failedOrderIds.push(order.id)
+              failedOrderIds.push(order.id);
             }
-          })
-        )
+          }),
+        );
       }
 
       toast({
         title: "Bulk Delete Complete",
-        description: failedOrderIds.length > 0 ? "Some selected orders could not be deleted" : "Selected orders were deleted successfully",
-        variant: successfulOrderIds.length > 0 ? "default" : "destructive"
-      })
+        description:
+          failedOrderIds.length > 0
+            ? "Some selected orders could not be deleted"
+            : "Selected orders were deleted successfully",
+        variant: successfulOrderIds.length > 0 ? "default" : "destructive",
+      });
 
-      setShowBulkDeleteDialog(false)
-      setSelectedOrders([])
+      setShowBulkDeleteDialog(false);
+      setSelectedOrders([]);
 
       // Refresh orders list
-      await refreshOrders()
+      await refreshOrders();
 
       // Trigger a custom event to notify other pages about the change
-      window.dispatchEvent(new CustomEvent('ordersDeleted', {
-        detail: { deletedOrders: selectedOrdersData }
-      }))
+      window.dispatchEvent(
+        new CustomEvent("ordersDeleted", {
+          detail: { deletedOrders: selectedOrdersData },
+        }),
+      );
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to delete orders",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setDeletingOrders(false)
+      setDeletingOrders(false);
     }
-  }
+  };
 
   const handlePrintInvoice = (order: Order) => {
     // Generate comprehensive invoice content for printing
@@ -725,11 +880,13 @@ ${brandConfig.name}`
             <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 tracking-tight">INVOICE</h1>
             <div class="mt-4">
               <p class="text-sm text-gray-500">Invoice #: <span class="font-medium text-gray-700">${order.orderNumber}</span></p>
-              <p class="text-sm text-gray-500">Date: <span class="font-medium text-gray-700">${new Date(order.createdAt).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })}</span></p>
+              <p class="text-sm text-gray-500">Date: <span class="font-medium text-gray-700">${new Date(
+                order.createdAt,
+              ).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}</span></p>
             </div>
           </div>
         </header>
@@ -738,22 +895,26 @@ ${brandConfig.name}`
           <!-- Bill To Section -->
           <div>
             <h2 class="text-sm font-semibold text-gray-600 mb-2">BILL TO</h2>
-            <p class="font-bold text-gray-800">${order.customerName || order.customer?.name || 'N/A'}</p>
-            <p class="text-sm text-gray-500">${order.shippingAddress || 'N/A'}</p>
-            <p class="text-sm text-gray-500">${order.shippingCity || ''}, ${order.shippingState || ''} ${order.shippingZipCode || ''}</p>
-            <p class="text-sm text-gray-500">${order.customerEmail || order.customer?.email || 'N/A'}</p>
-            <p class="text-sm text-gray-500">${order.customerPhone || order.customer?.phone || 'N/A'}</p>
+            <p class="font-bold text-gray-800">${order.customerName || order.customer?.name || "N/A"}</p>
+            <p class="text-sm text-gray-500">${order.shippingAddress || "N/A"}</p>
+            <p class="text-sm text-gray-500">${order.shippingCity || ""}, ${order.shippingState || ""} ${order.shippingZipCode || ""}</p>
+            <p class="text-sm text-gray-500">${order.customerEmail || order.customer?.email || "N/A"}</p>
+            <p class="text-sm text-gray-500">${order.customerPhone || order.customer?.phone || "N/A"}</p>
           </div>
 
           <!-- Payment Details Section -->
           <div class="text-left md:text-right">
             <h2 class="text-sm font-semibold text-gray-600 mb-2">PAYMENT DETAILS</h2>
-            <p class="text-sm text-gray-500">Payment Method: <span class="font-medium text-gray-700">${order.paymentMethod || 'N/A'}</span></p>
+            <p class="text-sm text-gray-500">Payment Method: <span class="font-medium text-gray-700">${order.paymentMethod || "N/A"}</span></p>
             <p class="text-sm text-gray-500">Payment Status: <span class="font-medium text-gray-700">${order.paymentStatus.toUpperCase()}</span></p>
             <p class="text-sm text-gray-500">Order Status: <span class="font-medium text-gray-700">${order.status.toUpperCase()}</span></p>
-            ${order.trackingNumber ? `
+            ${
+              order.trackingNumber
+                ? `
             <p class="text-sm text-gray-500">Tracking: <span class="font-medium text-gray-700">${order.trackingNumber}</span></p>
-            ` : ''}
+            `
+                : ""
+            }
           </div>
         </section>
 
@@ -772,17 +933,21 @@ ${brandConfig.name}`
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-200 bg-white">
-                    ${order.items.map(item => `
+                    ${order.items
+                      .map(
+                        (item) => `
                     <tr>
                       <td class="py-4 pl-4 pr-3 text-sm sm:pl-0">
                         <div class="font-medium text-gray-900">${item.productName}</div>
-                        ${item.productSku ? `<div class="text-gray-500">SKU: ${item.productSku}</div>` : ''}
+                        ${item.productSku ? `<div class="text-gray-500">SKU: ${item.productSku}</div>` : ""}
                       </td>
                       <td class="px-3 py-4 text-center text-sm text-gray-500">${item.quantity}</td>
                       <td class="px-3 py-4 text-right text-sm text-gray-500">৳${item.unitPrice.toLocaleString()}</td>
                       <td class="py-4 pl-3 pr-4 text-right text-sm font-medium text-gray-900 sm:pr-0">৳${item.total.toLocaleString()}</td>
                     </tr>
-                    `).join('')}
+                    `,
+                      )
+                      .join("")}
                   </tbody>
                 </table>
               </div>
@@ -798,29 +963,43 @@ ${brandConfig.name}`
                 <span class="text-sm text-gray-500">Subtotal</span>
                 <span class="text-sm font-medium text-gray-800">৳${order.subtotal.toLocaleString()}</span>
               </div>
-              ${order.discountAmount > 0 ? `
+              ${
+                order.discountAmount > 0
+                  ? `
               <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Discount</span>
                 <span class="text-sm font-medium text-green-600">-৳${order.discountAmount.toLocaleString()}</span>
               </div>
-              ` : ''}
-              ${order.taxAmount > 0 ? `
+              `
+                  : ""
+              }
+              ${
+                order.taxAmount > 0
+                  ? `
               <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Tax</span>
                 <span class="text-sm font-medium text-gray-800">৳${order.taxAmount.toLocaleString()}</span>
               </div>
-              ` : ''}
-              ${order.shippingAmount > 0 ? `
+              `
+                  : ""
+              }
+              ${
+                order.shippingAmount > 0
+                  ? `
               <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Delivery Charge</span>
                 <span class="text-sm font-medium text-gray-800">৳${order.shippingAmount.toLocaleString()}</span>
               </div>
-              ` : (order.shippingAddress || order.shippingCity) ? `
+              `
+                  : order.shippingAddress || order.shippingCity
+                    ? `
               <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Delivery Charge</span>
                 <span class="text-sm font-medium text-green-600">FREE</span>
               </div>
-              ` : ''}
+              `
+                    : ""
+              }
               <div class="flex justify-between pt-2 border-t border-gray-200">
                 <span class="text-base font-semibold text-gray-900">Grand Total</span>
                 <span class="text-base font-semibold text-gray-900">৳${order.total.toLocaleString()}</span>
@@ -829,22 +1008,28 @@ ${brandConfig.name}`
                 <span class="text-sm text-gray-500">Paid Amount</span>
                 <span class="text-sm font-medium text-gray-800">৳${(order.paidAmount || 0).toLocaleString()}</span>
               </div>
-              ${(order.total - (order.paidAmount || 0)) <= 0 ? `
+              ${
+                order.total - (order.paidAmount || 0) <= 0
+                  ? `
               <div class="flex justify-between items-center mt-4 p-3 bg-green-100 rounded-lg">
                 <span class="text-base font-bold text-gray-900">Amount Due</span>
                 <span class="text-lg font-bold text-green-600">৳0.00</span>
               </div>
-              ` : (order.paidAmount || 0) > 0 ? `
+              `
+                  : (order.paidAmount || 0) > 0
+                    ? `
               <div class="flex justify-between items-center mt-4 p-3 bg-yellow-100 rounded-lg">
                 <span class="text-base font-bold text-gray-900">Amount Due</span>
                 <span class="text-lg font-bold text-yellow-600">৳${(order.total - (order.paidAmount || 0)).toLocaleString()}</span>
               </div>
-              ` : `
+              `
+                    : `
               <div class="flex justify-between items-center mt-4 p-3 bg-red-100 rounded-lg">
                 <span class="text-base font-bold text-gray-900">Amount Due</span>
                 <span class="text-lg font-bold text-red-600">৳${order.total.toLocaleString()}</span>
               </div>
-              `}
+              `
+              }
             </div>
           </div>
         </section>
@@ -853,7 +1038,7 @@ ${brandConfig.name}`
           <!-- Notes and Footer -->
           <div>
             <h3 class="text-sm font-semibold text-gray-600">Notes</h3>
-            <p class="text-sm text-gray-500 mt-1">${order.notes || 'Thank you for your order! We hope to see you again soon.'}</p>
+            <p class="text-sm text-gray-500 mt-1">${order.notes || "Thank you for your order! We hope to see you again soon."}</p>
           </div>
           <div class="mt-8 text-center text-sm text-gray-400">
             <p>Powered by ${brandConfig.name}</p>
@@ -870,161 +1055,192 @@ ${brandConfig.name}`
       </div>
     </body>
     </html>
-    `
+    `;
 
-    const printWindow = window.open('', '_blank')
+    const printWindow = window.open("", "_blank");
     if (printWindow) {
-      printWindow.document.write(invoiceContent)
-      printWindow.document.close()
+      printWindow.document.write(invoiceContent);
+      printWindow.document.close();
     } else {
       toast({
         title: "Error",
-        description: "Could not open print window. Please check your browser's popup settings.",
-        variant: "destructive"
-      })
+        description:
+          "Could not open print window. Please check your browser's popup settings.",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
-  const handleUpdatePaymentStatus = async (orderId: string, paymentStatus: string) => {
+  const handleUpdatePaymentStatus = async (
+    orderId: string,
+    paymentStatus: string,
+  ) => {
     try {
-      await ordersService.updateOrder(orderId, { paymentStatus: paymentStatus as any })
+      await ordersService.updateOrder(orderId, {
+        paymentStatus: paymentStatus as any,
+      });
       toast({
         title: "Success",
-        description: "Payment status and invoice status were synchronized successfully.",
-      })
+        description:
+          "Payment status and invoice status were synchronized successfully.",
+      });
       // Reload orders with current query to see the changes
-      await refreshOrders()
+      await refreshOrders();
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to update payment status",
-        variant: "destructive"
-      })
+        description:
+          error.response?.data?.message || "Failed to update payment status",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const handleUpdateOrderStatus = async (order: Order, status: string) => {
     try {
-      const updated = await ordersService.updateOrder(order.id, { status: status as any })
-      setSelectedOrder(updated)
-      await refreshOrders()
-      toast({ title: "Success", description: `Order moved to ${status}.` })
+      const updated = await ordersService.updateOrder(order.id, {
+        status: status as any,
+      });
+      setSelectedOrder(updated);
+      await refreshOrders();
+      toast({ title: "Success", description: `Order moved to ${status}.` });
     } catch (error: any) {
-      toast({ title: "Status not changed", description: error.response?.data?.message || "The requested transition is not allowed.", variant: "destructive" })
-      throw error
+      toast({
+        title: "Status not changed",
+        description:
+          error.response?.data?.message ||
+          "The requested transition is not allowed.",
+        variant: "destructive",
+      });
+      throw error;
     }
-  }
+  };
 
   const handleViewDetails = (order: Order) => {
-    setSelectedOrder(order)
-    setShowViewDialog(true)
-  }
+    setSelectedOrder(order);
+    setShowViewDialog(true);
+    if (order.source === "storefront" && !order.ownerSeenAt) {
+      void ordersService.markStorefrontSeen(order.id).then(() => {
+        setOrders((values) =>
+          values.map((value) =>
+            value.id === order.id
+              ? { ...value, ownerSeenAt: new Date().toISOString() }
+              : value,
+          ),
+        );
+        setNewStorefrontOrders((value) => Math.max(0, value - 1));
+      });
+    }
+  };
 
   const handleEditOrder = (order: Order) => {
-    setSelectedOrder(order)
-    setShowEditDialog(true)
-  }
+    setSelectedOrder(order);
+    setShowEditDialog(true);
+  };
 
   const handleSaveOrderEdit = async (orderData: any) => {
-    if (!selectedOrder) return
+    if (!selectedOrder) return;
 
-    setSavingOrder(true)
+    setSavingOrder(true);
     try {
-      await ordersService.updateOrder(selectedOrder.id, orderData)
+      await ordersService.updateOrder(selectedOrder.id, orderData);
       toast({
         title: "Success",
         description: "Order updated successfully",
-      })
-      setShowEditDialog(false)
-      await refreshOrders()
+      });
+      setShowEditDialog(false);
+      await refreshOrders();
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.response?.data?.message || "Failed to update order",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setSavingOrder(false)
+      setSavingOrder(false);
     }
-  }
+  };
 
   const handleMarkAsPaid = async (order: Order) => {
     try {
       await ordersService.updateOrder(order.id, {
         paidAmount: order.total,
-        paymentStatus: 'paid'
-      })
+        paymentStatus: "paid",
+      });
       toast({
         title: "Success",
         description: "Order marked as paid successfully",
-      })
-      setShowViewDialog(false)
-      await refreshOrders()
+      });
+      setShowViewDialog(false);
+      await refreshOrders();
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to update payment status",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const handleTrackDelivery = (order: Order) => {
-    setSelectedOrder(order)
-    setPathaoTracking(null) // Reset previous tracking data
-    setShowTrackDialog(true)
-  }
+    setSelectedOrder(order);
+    setPathaoTracking(null); // Reset previous tracking data
+    setShowTrackDialog(true);
+  };
 
   // Manual function to fetch Pathao tracking
   const fetchPathaoTracking = async () => {
-    if (!selectedOrder) return
+    if (!selectedOrder) return;
 
-    const trackingNumber = selectedOrder.trackingNumber ?? '';
-    const phone = selectedOrder.customerPhone ?? '';
+    const trackingNumber = selectedOrder.trackingNumber ?? "";
+    const phone = selectedOrder.customerPhone ?? "";
 
     if (!trackingNumber || !phone) {
       toast({
         title: "Error",
         description: "Missing tracking number or customer phone",
-        variant: "destructive"
-      })
-      return
+        variant: "destructive",
+      });
+      return;
     }
 
-    setLoadingPathao(true)
+    setLoadingPathao(true);
     try {
-      const trackingResult = await deliveryService.trackPathaoDelivery(trackingNumber, phone)
-      setPathaoTracking(trackingResult)
+      const trackingResult = await deliveryService.trackPathaoDelivery(
+        trackingNumber,
+        phone,
+      );
+      setPathaoTracking(trackingResult);
 
       toast({
         title: "Success",
         description: "Pathao tracking data loaded successfully",
-      })
+      });
     } catch (error) {
-      console.error('Failed to fetch Pathao tracking:', error)
-      setPathaoTracking(null)
+      console.error("Failed to fetch Pathao tracking:", error);
+      setPathaoTracking(null);
       toast({
         title: "Error",
         description: "Failed to load Pathao tracking data",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setLoadingPathao(false)
+      setLoadingPathao(false);
     }
-  }
+  };
 
   const clearAdvancedFilters = () => {
-    setDateFrom("")
-    setDateTo("")
-    setAmountFrom("")
-    setAmountTo("")
-    setPaymentStatusFilter("all")
-    setCustomerFilter("")
-    setShowAdvancedFilters(false)
-  }
+    setDateFrom("");
+    setDateTo("");
+    setAmountFrom("");
+    setAmountTo("");
+    setPaymentStatusFilter("all");
+    setCustomerFilter("");
+    setShowAdvancedFilters(false);
+  };
 
   if (loading) {
-    return <PageSkeleton />
+    return <PageSkeleton />;
   }
 
   const orderStats = {
@@ -1033,113 +1249,218 @@ ${brandConfig.name}`
     processing: orders.filter((o) => o.status === "processing").length,
     shipped: orders.filter((o) => o.status === "shipped").length,
     delivered: orders.filter((o) => o.status === "delivered").length,
-  }
-  const visibleOrders = sourceFilter === "all" ? orders : orders.filter(order => (order.source || "manual") === sourceFilter)
+  };
+  const visibleOrders =
+    sourceFilter === "all"
+      ? orders
+      : orders.filter((order) => (order.source || "manual") === sourceFilter);
 
   return (
     <div className="mx-auto max-w-[100rem] space-y-6">
-      <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} actions={
-        <>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              await refreshOrders()
-              toast({
-                title: "Success",
-                description: "Orders refreshed successfully",
-              })
-            }}
-            disabled={loading}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            {t("reload")}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              try {
-                await paperflySyncService.performSync(true)
-                await refreshOrders()
+      <PageHeader
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={t("description")}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                await refreshOrders();
                 toast({
                   title: "Success",
-                  description: "Paperfly orders synced successfully",
-                })
-              } catch (error) {
-                toast({
-                  title: "Error",
-                  description: "Failed to sync Paperfly orders",
-                  variant: "destructive"
-                })
-              }
-            }}
-            disabled={loading}
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            {t("sync")}
-          </Button>
-          <OrdersPDFExport
-            orders={orders}
-            totalOrders={totalOrders}
-            currentQuery={buildCurrentQuery()}
-            onRefreshOrders={refreshOrdersWithQuery}
-          />
-        </>
-      } />
+                  description: "Orders refreshed successfully",
+                });
+              }}
+              disabled={loading}
+            >
+              <RefreshCw
+                className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
+              />
+              {t("reload")}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  await paperflySyncService.performSync(true);
+                  await refreshOrders();
+                  toast({
+                    title: "Success",
+                    description: "Paperfly orders synced successfully",
+                  });
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: "Failed to sync Paperfly orders",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              disabled={loading}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              {t("sync")}
+            </Button>
+            <OrdersPDFExport
+              orders={orders}
+              totalOrders={totalOrders}
+              currentQuery={buildCurrentQuery()}
+              onRefreshOrders={refreshOrdersWithQuery}
+            />
+          </>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label={t("total")} value={orderStats.total.toLocaleString(locale)} icon={Package} tone="primary" />
-        <MetricCard label={t("pending")} value={orderStats.pending.toLocaleString(locale)} icon={Clock} tone="warning" />
-        <MetricCard label={t("processing")} value={orderStats.processing.toLocaleString(locale)} icon={Package} tone="accent" />
-        <MetricCard label={t("delivered")} value={orderStats.delivered.toLocaleString(locale)} icon={CheckCircle} tone="success" />
+        <MetricCard
+          label={t("total")}
+          value={orderStats.total.toLocaleString(locale)}
+          icon={Package}
+          tone="primary"
+        />
+        <MetricCard
+          label={t("pending")}
+          value={orderStats.pending.toLocaleString(locale)}
+          icon={Clock}
+          tone="warning"
+        />
+        <MetricCard
+          label={t("processing")}
+          value={orderStats.processing.toLocaleString(locale)}
+          icon={Package}
+          tone="accent"
+        />
+        <MetricCard
+          label={t("delivered")}
+          value={orderStats.delivered.toLocaleString(locale)}
+          icon={CheckCircle}
+          tone="success"
+        />
       </div>
 
       <PageToolbar>
         <div className="flex min-w-0 flex-1 flex-col gap-3 lg:flex-row lg:items-center">
           <div className="relative w-full lg:max-w-sm">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input aria-label={t("search")} placeholder={t("search")} value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} className="pl-9" />
+            <Input
+              aria-label={t("search")}
+              placeholder={t("search")}
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="pl-9"
+            />
           </div>
-          <div className="flex gap-1 overflow-x-auto pb-1 lg:pb-0" aria-label={t("source")}>
-            {[["all", "allSources"], ["storefront", "storefront"], ["pos", "pos"], ["manual", "manual"]].map(([value, label]) => <Button key={value} type="button" size="sm" variant={sourceFilter === value ? "default" : "ghost"} onClick={() => setSourceFilter(value)} className="shrink-0">{t(label)}</Button>)}
+          <div
+            className="flex gap-1 overflow-x-auto pb-1 lg:pb-0"
+            aria-label={t("source")}
+          >
+            {[
+              ["all", "allSources"],
+              ["storefront", "storefront"],
+              ["pos", "pos"],
+              ["manual", "manual"],
+            ].map(([value, label]) => (
+              <Button
+                key={value}
+                type="button"
+                size="sm"
+                variant={sourceFilter === value ? "default" : "ghost"}
+                onClick={() => setSourceFilter(value)}
+                className="shrink-0"
+              >
+                {t(label)}
+              </Button>
+            ))}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}><Filter className="mr-2 size-4" />{t("filters")}</Button>
-          <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(parseInt(value))}>
-            <SelectTrigger className="w-20" aria-label="Orders per page"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="25">25</SelectItem><SelectItem value="50">50</SelectItem><SelectItem value="75">75</SelectItem><SelectItem value="100">100</SelectItem></SelectContent>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          >
+            <Filter className="mr-2 size-4" />
+            {t("filters")}
+          </Button>
+          <Select
+            value={pageSize.toString()}
+            onValueChange={(value) => handlePageSizeChange(parseInt(value))}
+          >
+            <SelectTrigger className="w-20" aria-label="Orders per page">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="75">75</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
           </Select>
         </div>
       </PageToolbar>
 
       {newStorefrontOrders > 0 && (
-        <div role="status" aria-live="polite" className="flex items-center justify-between rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-950">
-          <span>{newStorefrontOrders} new storefront {newStorefrontOrders === 1 ? "order" : "orders"}</span>
-          <Button type="button" size="sm" onClick={() => { setSourceFilter("storefront"); setCurrentPage(1); setNewStorefrontOrders(0) }}>View orders</Button>
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center justify-between rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-950"
+        >
+          <span>
+            {newStorefrontOrders} new storefront{" "}
+            {newStorefrontOrders === 1 ? "order" : "orders"}
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              setSourceFilter("storefront");
+              setCurrentPage(1);
+            }}
+          >
+            View orders
+          </Button>
         </div>
+      )}
+      {storefrontPollingOffline && (
+        <p role="status" className="text-xs text-muted-foreground">
+          Online-order updates are reconnecting…
+        </p>
       )}
 
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span>{((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalOrders)} / {totalOrders}</span>
-          {(dateFrom || dateTo || amountFrom || amountTo || paymentStatusFilter !== "all" || customerFilter) && (
-            <>
-              {dateFrom && <Badge variant="outline">From: {dateFrom}</Badge>}
-              {dateTo && <Badge variant="outline">To: {dateTo}</Badge>}
-              {amountFrom && <Badge variant="outline">Min: ৳{amountFrom}</Badge>}
-              {amountTo && <Badge variant="outline">Max: ৳{amountTo}</Badge>}
-              {paymentStatusFilter !== "all" && <Badge variant="outline">Payment: {paymentStatusFilter}</Badge>}
-              {customerFilter && <Badge variant="outline">Customer: {customerFilter}</Badge>}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearAdvancedFilters}
-                className="text-xs h-6 px-2"
-              >
-                Clear all filters
-              </Button>
-            </>
-          )}
+        <span>
+          {(currentPage - 1) * pageSize + 1}–
+          {Math.min(currentPage * pageSize, totalOrders)} / {totalOrders}
+        </span>
+        {(dateFrom ||
+          dateTo ||
+          amountFrom ||
+          amountTo ||
+          paymentStatusFilter !== "all" ||
+          customerFilter) && (
+          <>
+            {dateFrom && <Badge variant="outline">From: {dateFrom}</Badge>}
+            {dateTo && <Badge variant="outline">To: {dateTo}</Badge>}
+            {amountFrom && <Badge variant="outline">Min: ৳{amountFrom}</Badge>}
+            {amountTo && <Badge variant="outline">Max: ৳{amountTo}</Badge>}
+            {paymentStatusFilter !== "all" && (
+              <Badge variant="outline">Payment: {paymentStatusFilter}</Badge>
+            )}
+            {customerFilter && (
+              <Badge variant="outline">Customer: {customerFilter}</Badge>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearAdvancedFilters}
+              className="text-xs h-6 px-2"
+            >
+              Clear all filters
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Orders Table */}
@@ -1160,7 +1481,8 @@ ${brandConfig.name}`
                     className="flex items-center gap-2"
                   >
                     <Printer className="w-4 h-4" />
-                    <span className="hidden sm:inline">Print</span> ({selectedOrders.length})
+                    <span className="hidden sm:inline">Print</span> (
+                    {selectedOrders.length})
                   </Button>
                   <Button
                     variant="outline"
@@ -1169,7 +1491,8 @@ ${brandConfig.name}`
                     className="flex items-center gap-2"
                   >
                     <MessageSquare className="w-4 h-4" />
-                    <span className="hidden sm:inline">SMS</span> ({selectedOrders.length})
+                    <span className="hidden sm:inline">SMS</span> (
+                    {selectedOrders.length})
                   </Button>
                   <Button
                     variant="destructive"
@@ -1178,7 +1501,8 @@ ${brandConfig.name}`
                     className="flex items-center gap-2"
                   >
                     <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Delete</span> ({selectedOrders.length})
+                    <span className="hidden sm:inline">Delete</span> (
+                    {selectedOrders.length})
                   </Button>
                   <Button
                     variant="ghost"
@@ -1237,8 +1561,26 @@ ${brandConfig.name}`
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Payment Status</label>
-                    <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All status</SelectItem><SelectItem value="pending">Pending</SelectItem><SelectItem value="partial">Partial</SelectItem><SelectItem value="paid">Paid</SelectItem><SelectItem value="cod">Cash on delivery</SelectItem><SelectItem value="refunded">Refunded</SelectItem><SelectItem value="failed">Failed</SelectItem></SelectContent></Select>
+                    <label className="text-sm font-medium">
+                      Payment Status
+                    </label>
+                    <Select
+                      value={paymentStatusFilter}
+                      onValueChange={setPaymentStatusFilter}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All status</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="partial">Partial</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                        <SelectItem value="cod">Cash on delivery</SelectItem>
+                        <SelectItem value="refunded">Refunded</SelectItem>
+                        <SelectItem value="failed">Failed</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <label className="text-sm font-medium">Customer</label>
@@ -1251,10 +1593,20 @@ ${brandConfig.name}`
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row justify-end gap-2 mt-4">
-                  <Button variant="outline" size="sm" onClick={clearAdvancedFilters} className="w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearAdvancedFilters}
+                    className="w-full sm:w-auto"
+                  >
                     Clear Filters
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setShowAdvancedFilters(false)} className="w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAdvancedFilters(false)}
+                    className="w-full sm:w-auto"
+                  >
                     Hide Filters
                   </Button>
                 </div>
@@ -1262,14 +1614,30 @@ ${brandConfig.name}`
             </Card>
           )}
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
             <TabsList className="mx-4 grid w-[calc(100%-2rem)] h-auto grid-cols-3 gap-1 sm:grid-cols-6">
-              <TabsTrigger value="all" className="text-xs sm:text-sm">All</TabsTrigger>
-              <TabsTrigger value="pending" className="text-xs sm:text-sm">Pending</TabsTrigger>
-              <TabsTrigger value="processing" className="text-xs sm:text-sm">Processing</TabsTrigger>
-              <TabsTrigger value="shipped" className="text-xs sm:text-sm">Shipped</TabsTrigger>
-              <TabsTrigger value="delivered" className="text-xs sm:text-sm">Delivered</TabsTrigger>
-              <TabsTrigger value="cancelled" className="text-xs sm:text-sm">Cancelled</TabsTrigger>
+              <TabsTrigger value="all" className="text-xs sm:text-sm">
+                All
+              </TabsTrigger>
+              <TabsTrigger value="pending" className="text-xs sm:text-sm">
+                Pending
+              </TabsTrigger>
+              <TabsTrigger value="processing" className="text-xs sm:text-sm">
+                Processing
+              </TabsTrigger>
+              <TabsTrigger value="shipped" className="text-xs sm:text-sm">
+                Shipped
+              </TabsTrigger>
+              <TabsTrigger value="delivered" className="text-xs sm:text-sm">
+                Delivered
+              </TabsTrigger>
+              <TabsTrigger value="cancelled" className="text-xs sm:text-sm">
+                Cancelled
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value={activeTab} className="mt-4">
@@ -1281,7 +1649,10 @@ ${brandConfig.name}`
                       <TableRow>
                         <TableHead className="w-[50px]">
                           <Checkbox
-                            checked={selectedOrders.length === visibleOrders.length && visibleOrders.length > 0}
+                            checked={
+                              selectedOrders.length === visibleOrders.length &&
+                              visibleOrders.length > 0
+                            }
                             onCheckedChange={handleSelectAllOrders}
                             aria-label="Select all orders"
                           />
@@ -1298,70 +1669,131 @@ ${brandConfig.name}`
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {visibleOrders.length === 0 && <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground">{t("empty")}</TableCell></TableRow>}
+                      {visibleOrders.length === 0 && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={10}
+                            className="h-32 text-center text-muted-foreground"
+                          >
+                            {t("empty")}
+                          </TableCell>
+                        </TableRow>
+                      )}
                       {visibleOrders.map((order) => (
                         <TableRow key={order.id}>
                           <TableCell>
                             <Checkbox
                               checked={selectedOrders.includes(order.id)}
-                              onCheckedChange={(checked) => handleSelectOrder(order.id, checked as boolean)}
+                              onCheckedChange={(checked) =>
+                                handleSelectOrder(order.id, checked as boolean)
+                              }
                               aria-label="Select order"
                             />
                           </TableCell>
-                          <TableCell><span className="block font-medium">{order.orderNumber.slice(-6)}</span><span className="mt-1 inline-block"><StatusBadge tone="neutral">{t(order.source || "manual")}</StatusBadge></span></TableCell>
+                          <TableCell>
+                            <span className="block font-medium">
+                              {order.orderNumber.slice(-6)}
+                            </span>
+                            <span className="mt-1 inline-block">
+                              <StatusBadge tone="neutral">
+                                {t(order.source || "manual")}
+                              </StatusBadge>
+                            </span>
+                          </TableCell>
                           <TableCell>
                             <div>
-                              <div className="font-medium">{order.customerName || order.customer?.name || 'N/A'}</div>
+                              <div className="font-medium">
+                                {order.customerName ||
+                                  order.customer?.name ||
+                                  "N/A"}
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell>{order.items.length}</TableCell>
                           <TableCell>{formatCurrency(order.total)}</TableCell>
                           <TableCell>{getStatusBadge(order.status)}</TableCell>
-                          <TableCell>{getPaymentBadge(order.paymentStatus)}</TableCell>
-                          <TableCell>{new Date(order.createdAt).toLocaleDateString(locale === "bn" ? "bn-BD" : "en-BD")}</TableCell>
                           <TableCell>
-                            {order.trackingNumber || order.paperflyOrderNumber ? (
+                            {getPaymentBadge(order.paymentStatus)}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(order.createdAt).toLocaleDateString(
+                              locale === "bn" ? "bn-BD" : "en-BD",
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {order.trackingNumber ||
+                            order.paperflyOrderNumber ? (
                               <div className="text-sm space-y-1">
                                 {(order as any).trackingStatus ? (
-                                  <Badge variant="default" className={`text-xs ${
-                                    (order as any).trackingStatus.toLowerCase().includes('delivered') ? 'bg-green-100 text-green-800' :
-                                    (order as any).trackingStatus.toLowerCase().includes('cancel') ? 'bg-red-100 text-red-800' :
-                                    (order as any).trackingStatus.toLowerCase().includes('picked') ? 'bg-blue-100 text-blue-800' :
-                                    'bg-purple-100 text-purple-800'
-                                  }`}>
+                                  <Badge
+                                    variant="default"
+                                    className={`text-xs ${
+                                      (order as any).trackingStatus
+                                        .toLowerCase()
+                                        .includes("delivered")
+                                        ? "bg-green-100 text-green-800"
+                                        : (order as any).trackingStatus
+                                              .toLowerCase()
+                                              .includes("cancel")
+                                          ? "bg-red-100 text-red-800"
+                                          : (order as any).trackingStatus
+                                                .toLowerCase()
+                                                .includes("picked")
+                                            ? "bg-blue-100 text-blue-800"
+                                            : "bg-purple-100 text-purple-800"
+                                    }`}
+                                  >
                                     {(order as any).trackingStatus}
                                   </Badge>
-                                ) : order.status === 'shipped' ? (
-                                  <Badge variant="default" className="bg-purple-100 text-purple-800 text-xs">
+                                ) : order.status === "shipped" ? (
+                                  <Badge
+                                    variant="default"
+                                    className="bg-purple-100 text-purple-800 text-xs"
+                                  >
                                     In Transit
                                   </Badge>
-                                ) : order.status === 'delivered' ? (
-                                  <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                                ) : order.status === "delivered" ? (
+                                  <Badge
+                                    variant="default"
+                                    className="bg-green-100 text-green-800 text-xs"
+                                  >
                                     Delivered
                                   </Badge>
                                 ) : null}
                               </div>
                             ) : (
-                              <span className="text-muted-foreground text-sm">N/A</span>
+                              <span className="text-muted-foreground text-sm">
+                                N/A
+                              </span>
                             )}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0" aria-label={`${t("actions")} ${order.orderNumber}`}>
+                                <Button
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0"
+                                  aria-label={`${t("actions")} ${order.orderNumber}`}
+                                >
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleViewDetails(order)}>
+                                <DropdownMenuItem
+                                  onClick={() => handleViewDetails(order)}
+                                >
                                   <Eye className="mr-2 h-4 w-4" />
                                   View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleEditOrder(order)}>
+                                <DropdownMenuItem
+                                  onClick={() => handleEditOrder(order)}
+                                >
                                   <Edit className="mr-2 h-4 w-4" />
                                   Edit Order
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handlePrintInvoice(order)}>
+                                <DropdownMenuItem
+                                  onClick={() => handlePrintInvoice(order)}
+                                >
                                   <Printer className="mr-2 h-4 w-4" />
                                   Print Invoice
                                 </DropdownMenuItem>
@@ -1376,40 +1808,63 @@ ${brandConfig.name}`
 
                 {/* Mobile Card View */}
                 <div className="lg:hidden">
-                  {visibleOrders.length === 0 && <p className="p-10 text-center text-sm text-muted-foreground">{t("empty")}</p>}
+                  {visibleOrders.length === 0 && (
+                    <p className="p-10 text-center text-sm text-muted-foreground">
+                      {t("empty")}
+                    </p>
+                  )}
                   {visibleOrders.map((order) => (
-                    <div key={order.id} className="border-b p-4 last:border-b-0">
+                    <div
+                      key={order.id}
+                      className="border-b p-4 last:border-b-0"
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <Checkbox
                               checked={selectedOrders.includes(order.id)}
-                              onCheckedChange={(checked) => handleSelectOrder(order.id, checked as boolean)}
+                              onCheckedChange={(checked) =>
+                                handleSelectOrder(order.id, checked as boolean)
+                              }
                               aria-label="Select order"
                             />
                             <div>
-                              <div className="font-semibold text-lg">#{order.orderNumber}</div>
+                              <div className="font-semibold text-lg">
+                                #{order.orderNumber}
+                              </div>
                               <div className="text-sm text-muted-foreground">
-                                {new Date(order.createdAt).toLocaleDateString(locale === "bn" ? "bn-BD" : "en-BD")}
+                                {new Date(order.createdAt).toLocaleDateString(
+                                  locale === "bn" ? "bn-BD" : "en-BD",
+                                )}
                               </div>
                             </div>
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" aria-label={`${t("actions")} ${order.orderNumber}`}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={`${t("actions")} ${order.orderNumber}`}
+                              >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleViewDetails(order)}>
+                              <DropdownMenuItem
+                                onClick={() => handleViewDetails(order)}
+                              >
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleEditOrder(order)}>
+                              <DropdownMenuItem
+                                onClick={() => handleEditOrder(order)}
+                              >
                                 <Edit className="mr-2 h-4 w-4" />
                                 Edit Order
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handlePrintInvoice(order)}>
+                              <DropdownMenuItem
+                                onClick={() => handlePrintInvoice(order)}
+                              >
                                 <Printer className="mr-2 h-4 w-4" />
                                 Print Invoice
                               </DropdownMenuItem>
@@ -1419,68 +1874,133 @@ ${brandConfig.name}`
 
                         <div className="space-y-2">
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Customer:</span>
+                            <span className="text-sm text-muted-foreground">
+                              Customer:
+                            </span>
                             <div className="text-right">
-                              <div className="font-medium">{order.customerName || order.customer?.name || 'N/A'}</div>
-                              <div className="text-sm text-muted-foreground">{order.customerEmail || order.customer?.email || 'N/A'}</div>
+                              <div className="font-medium">
+                                {order.customerName ||
+                                  order.customer?.name ||
+                                  "N/A"}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {order.customerEmail ||
+                                  order.customer?.email ||
+                                  "N/A"}
+                              </div>
                             </div>
                           </div>
 
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Items:</span>
-                            <span className="font-medium">{order.items.length} items</span>
+                            <span className="text-sm text-muted-foreground">
+                              Items:
+                            </span>
+                            <span className="font-medium">
+                              {order.items.length} items
+                            </span>
                           </div>
 
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Total:</span>
-                            <span className="font-semibold text-lg">{formatCurrency(order.total)}</span>
+                            <span className="text-sm text-muted-foreground">
+                              Total:
+                            </span>
+                            <span className="font-semibold text-lg">
+                              {formatCurrency(order.total)}
+                            </span>
                           </div>
 
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Status:</span>
+                            <span className="text-sm text-muted-foreground">
+                              Status:
+                            </span>
                             {getStatusBadge(order.status)}
                           </div>
 
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Payment:</span>
+                            <span className="text-sm text-muted-foreground">
+                              Payment:
+                            </span>
                             {getPaymentBadge(order.paymentStatus)}
                           </div>
 
-                          {(order.trackingNumber || order.paperflyOrderNumber) && (
+                          {(order.trackingNumber ||
+                            order.paperflyOrderNumber) && (
                             <div className="mt-3 p-3 bg-muted rounded-lg">
-                              <div className="text-sm font-medium mb-1">Tracking Information</div>
+                              <div className="text-sm font-medium mb-1">
+                                Tracking Information
+                              </div>
                               <div className="text-sm text-muted-foreground space-y-1">
                                 <div className="flex items-center justify-between">
                                   <span>Service:</span>
-                                  <span className="font-medium">{order.courierService || (order.paperflyOrderNumber ? 'Paperfly' : 'N/A')}</span>
+                                  <span className="font-medium">
+                                    {order.courierService ||
+                                      (order.paperflyOrderNumber
+                                        ? "Paperfly"
+                                        : "N/A")}
+                                  </span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                   <span>Number:</span>
-                                  <span className="font-mono text-xs">{order.paperflyOrderNumber || order.trackingNumber}</span>
+                                  <span className="font-mono text-xs">
+                                    {order.paperflyOrderNumber ||
+                                      order.trackingNumber}
+                                  </span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                   <span>Status:</span>
                                   {(order as any).trackingStatus ? (
-                                    <Badge variant="default" className={`text-xs ${
-                                      (order as any).trackingStatus.toLowerCase().includes('delivered') ? 'bg-green-100 text-green-800' :
-                                      (order as any).trackingStatus.toLowerCase().includes('cancel') || 
-                                      (order as any).trackingStatus.toLowerCase().includes('failed') ||
-                                      (order as any).trackingStatus.toLowerCase().includes('returned') ? 'bg-red-100 text-red-800' :
-                                      (order as any).trackingStatus.toLowerCase().includes('picked') ||
-                                      (order as any).trackingStatus.toLowerCase().includes('assigned') ? 'bg-blue-100 text-blue-800' :
-                                      (order as any).trackingStatus.toLowerCase().includes('in transit') ||
-                                      (order as any).trackingStatus.toLowerCase().includes('transit') ? 'bg-purple-100 text-purple-800' :
-                                      (order as any).trackingStatus.toLowerCase().includes('pending') ? 'bg-yellow-100 text-yellow-800' :
-                                      'bg-gray-100 text-gray-800'
-                                    }`}>
+                                    <Badge
+                                      variant="default"
+                                      className={`text-xs ${
+                                        (order as any).trackingStatus
+                                          .toLowerCase()
+                                          .includes("delivered")
+                                          ? "bg-green-100 text-green-800"
+                                          : (order as any).trackingStatus
+                                                .toLowerCase()
+                                                .includes("cancel") ||
+                                              (order as any).trackingStatus
+                                                .toLowerCase()
+                                                .includes("failed") ||
+                                              (order as any).trackingStatus
+                                                .toLowerCase()
+                                                .includes("returned")
+                                            ? "bg-red-100 text-red-800"
+                                            : (order as any).trackingStatus
+                                                  .toLowerCase()
+                                                  .includes("picked") ||
+                                                (order as any).trackingStatus
+                                                  .toLowerCase()
+                                                  .includes("assigned")
+                                              ? "bg-blue-100 text-blue-800"
+                                              : (order as any).trackingStatus
+                                                    .toLowerCase()
+                                                    .includes("in transit") ||
+                                                  (order as any).trackingStatus
+                                                    .toLowerCase()
+                                                    .includes("transit")
+                                                ? "bg-purple-100 text-purple-800"
+                                                : (order as any).trackingStatus
+                                                      .toLowerCase()
+                                                      .includes("pending")
+                                                  ? "bg-yellow-100 text-yellow-800"
+                                                  : "bg-gray-100 text-gray-800"
+                                      }`}
+                                    >
                                       {(order as any).trackingStatus}
                                     </Badge>
-                                  ) : order.status === 'shipped' ? (
-                                    <Badge variant="default" className="bg-purple-100 text-purple-800 text-xs">
+                                  ) : order.status === "shipped" ? (
+                                    <Badge
+                                      variant="default"
+                                      className="bg-purple-100 text-purple-800 text-xs"
+                                    >
                                       In Transit
                                     </Badge>
-                                  ) : order.status === 'delivered' ? (
-                                    <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                                  ) : order.status === "delivered" ? (
+                                    <Badge
+                                      variant="default"
+                                      className="bg-green-100 text-green-800 text-xs"
+                                    >
                                       Delivered
                                     </Badge>
                                   ) : null}
@@ -1508,10 +2028,12 @@ ${brandConfig.name}`
                 <PaginationPrevious
                   href="#"
                   onClick={(e) => {
-                    e.preventDefault()
-                    if (currentPage > 1) handlePageChange(currentPage - 1)
+                    e.preventDefault();
+                    if (currentPage > 1) handlePageChange(currentPage - 1);
                   }}
-                  className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                  className={
+                    currentPage <= 1 ? "pointer-events-none opacity-50" : ""
+                  }
                 />
               </PaginationItem>
 
@@ -1519,40 +2041,51 @@ ${brandConfig.name}`
               {currentPage > 3 && (
                 <>
                   <PaginationItem className="hidden sm:block">
-                    <PaginationLink href="#" onClick={(e) => { e.preventDefault(); handlePageChange(1) }}>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handlePageChange(1);
+                      }}
+                    >
                       1
                     </PaginationLink>
                   </PaginationItem>
-                  {currentPage > 4 && <PaginationEllipsis className="hidden sm:block" />}
+                  {currentPage > 4 && (
+                    <PaginationEllipsis className="hidden sm:block" />
+                  )}
                 </>
               )}
 
               {/* Page numbers around current page */}
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum
+                let pageNum;
                 if (totalPages <= 5) {
-                  pageNum = i + 1
+                  pageNum = i + 1;
                 } else if (currentPage <= 3) {
-                  pageNum = i + 1
+                  pageNum = i + 1;
                 } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i
+                  pageNum = totalPages - 4 + i;
                 } else {
-                  pageNum = currentPage - 2 + i
+                  pageNum = currentPage - 2 + i;
                 }
 
-                if (pageNum < 1 || pageNum > totalPages) return null
+                if (pageNum < 1 || pageNum > totalPages) return null;
 
                 return (
                   <PaginationItem key={pageNum}>
                     <PaginationLink
                       href="#"
-                      onClick={(e) => { e.preventDefault(); handlePageChange(pageNum) }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handlePageChange(pageNum);
+                      }}
                       isActive={currentPage === pageNum}
                     >
                       {pageNum}
                     </PaginationLink>
                   </PaginationItem>
-                )
+                );
               })}
 
               {/* Last page */}
@@ -1560,7 +2093,13 @@ ${brandConfig.name}`
                 <>
                   {currentPage < totalPages - 3 && <PaginationEllipsis />}
                   <PaginationItem>
-                    <PaginationLink href="#" onClick={(e) => { e.preventDefault(); handlePageChange(totalPages) }}>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handlePageChange(totalPages);
+                      }}
+                    >
                       {totalPages}
                     </PaginationLink>
                   </PaginationItem>
@@ -1571,10 +2110,15 @@ ${brandConfig.name}`
                 <PaginationNext
                   href="#"
                   onClick={(e) => {
-                    e.preventDefault()
-                    if (currentPage < totalPages) handlePageChange(currentPage + 1)
+                    e.preventDefault();
+                    if (currentPage < totalPages)
+                      handlePageChange(currentPage + 1);
                   }}
-                  className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                  className={
+                    currentPage >= totalPages
+                      ? "pointer-events-none opacity-50"
+                      : ""
+                  }
                 />
               </PaginationItem>
             </PaginationContent>
@@ -1609,7 +2153,9 @@ ${brandConfig.name}`
       <Dialog open={showTrackDialog} onOpenChange={setShowTrackDialog}>
         <DialogContent className="max-w-md w-full p-6 bg-white dark:bg-gray-900 rounded-lg shadow-lg">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">Track Package - {selectedOrder?.orderNumber}</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Track Package - {selectedOrder?.orderNumber}
+            </DialogTitle>
             <DialogDescription className="text-gray-500 dark:text-gray-400">
               Package tracking information and delivery status
             </DialogDescription>
@@ -1618,13 +2164,17 @@ ${brandConfig.name}`
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
-                  <Label className="text-gray-800 dark:text-gray-200">Order Status</Label>
+                  <Label className="text-gray-800 dark:text-gray-200">
+                    Order Status
+                  </Label>
                   <div className="mt-1">
                     {getStatusBadge(selectedOrder.status)}
                   </div>
                 </div>
                 <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
-                  <Label className="text-gray-800 dark:text-gray-200">Payment Status</Label>
+                  <Label className="text-gray-800 dark:text-gray-200">
+                    Payment Status
+                  </Label>
                   <div className="mt-1">
                     {getPaymentBadge(selectedOrder.paymentStatus)}
                   </div>
@@ -1632,96 +2182,176 @@ ${brandConfig.name}`
               </div>
 
               <div className="space-y-2 border-t pt-3 dark:border-gray-700">
-                <Label className="text-gray-800 dark:text-gray-200">Delivery Status</Label>
+                <Label className="text-gray-800 dark:text-gray-200">
+                  Delivery Status
+                </Label>
                 <div className="mt-1">
-                  {selectedOrder.status === 'shipped' ?
-                    <Badge variant="default" className="bg-purple-100 text-purple-800">In Transit</Badge> :
+                  {selectedOrder.status === "shipped" ? (
+                    <Badge
+                      variant="default"
+                      className="bg-purple-100 text-purple-800"
+                    >
+                      In Transit
+                    </Badge>
+                  ) : (
                     getStatusBadge(selectedOrder.status)
-                  }
+                  )}
                 </div>
               </div>
 
               {selectedOrder.trackingNumber ? (
                 <div className="space-y-3">
                   <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
-                    <Label className="text-gray-800 dark:text-gray-200">Courier Service</Label>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{selectedOrder.courierService || 'N/A'}</p>
+                    <Label className="text-gray-800 dark:text-gray-200">
+                      Courier Service
+                    </Label>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                      {selectedOrder.courierService || "N/A"}
+                    </p>
                   </div>
                   <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
-                    <Label className="text-gray-800 dark:text-gray-200">Tracking Number</Label>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{selectedOrder.trackingNumber}</p>
+                    <Label className="text-gray-800 dark:text-gray-200">
+                      Tracking Number
+                    </Label>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                      {selectedOrder.trackingNumber}
+                    </p>
                   </div>
 
                   <div className="border-t pt-3 dark:border-gray-700">
-
                     {/* Direct links to couriers */}
                     {selectedOrder.courierService && (
                       <div className="space-y-2">
-                        {(selectedOrder.courierService?.toLowerCase().includes('paperfly') || selectedOrder.paperflyOrderNumber) && (selectedOrder.trackingNumber || selectedOrder.paperflyOrderNumber) && (
-                          <>
-                            <Button variant="outline" size="sm" className="w-full" onClick={() => openPaperflyTrackingPage(selectedOrder)}>
+                        {(selectedOrder.courierService
+                          ?.toLowerCase()
+                          .includes("paperfly") ||
+                          selectedOrder.paperflyOrderNumber) &&
+                          (selectedOrder.trackingNumber ||
+                            selectedOrder.paperflyOrderNumber) && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={() =>
+                                  openPaperflyTrackingPage(selectedOrder)
+                                }
+                              >
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                Track on Paperfly
+                              </Button>
+                            </>
+                          )}
+                        {selectedOrder.courierService
+                          .toLowerCase()
+                          .includes("steadfast") &&
+                          selectedOrder.trackingNumber && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              onClick={openSteadfastPortal}
+                            >
                               <ExternalLink className="h-4 w-4 mr-2" />
-                              Track on Paperfly
+                              Track on Steadfast
                             </Button>
-                          </>
-                        )}
-                        {selectedOrder.courierService.toLowerCase().includes('steadfast') && selectedOrder.trackingNumber && (
-                          <Button variant="outline" size="sm" className="w-full" onClick={openSteadfastPortal}>
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Track on Steadfast
-                          </Button>
-                        )}
+                          )}
 
                         {/* Pathao Tracking Integration */}
-                        {selectedOrder.courierService.toLowerCase().includes('pathao') && (
+                        {selectedOrder.courierService
+                          .toLowerCase()
+                          .includes("pathao") && (
                           <div className="space-y-3 pt-2">
                             <div className="flex items-center justify-between">
-                              <h4 className="text-sm font-medium">Pathao Tracking</h4>
+                              <h4 className="text-sm font-medium">
+                                Pathao Tracking
+                              </h4>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={fetchPathaoTracking}
                                 disabled={loadingPathao}
                               >
-                                {loadingPathao ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-2" />}
-                                {pathaoTracking ? 'Refresh' : 'Load Data'}
+                                {loadingPathao ? (
+                                  <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="h-3 w-3 mr-2" />
+                                )}
+                                {pathaoTracking ? "Refresh" : "Load Data"}
                               </Button>
                             </div>
 
                             {pathaoTracking ? (
                               <div className="bg-slate-50 dark:bg-slate-800 rounded-md p-3 text-sm space-y-3 border">
-                                {(pathaoTracking.data?.order || pathaoTracking.order) && (
+                                {(pathaoTracking.data?.order ||
+                                  pathaoTracking.order) && (
                                   <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                      <div className="text-xs text-muted-foreground">Recipient</div>
-                                      <div className="font-medium">{(pathaoTracking.data?.order || pathaoTracking.order).recipient_name}</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        Recipient
+                                      </div>
+                                      <div className="font-medium">
+                                        {
+                                          (
+                                            pathaoTracking.data?.order ||
+                                            pathaoTracking.order
+                                          ).recipient_name
+                                        }
+                                      </div>
                                     </div>
                                     <div>
-                                      <div className="text-xs text-muted-foreground">Status</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        Status
+                                      </div>
                                       <div className="font-semibold text-blue-600">
                                         {pathaoTracking.data?.display_status ||
-                                         (pathaoTracking.data?.order || pathaoTracking.order)?.transfer_status ||
-                                         (pathaoTracking.data?.state || pathaoTracking.state)?.name}
+                                          (
+                                            pathaoTracking.data?.order ||
+                                            pathaoTracking.order
+                                          )?.transfer_status ||
+                                          (
+                                            pathaoTracking.data?.state ||
+                                            pathaoTracking.state
+                                          )?.name}
                                       </div>
                                     </div>
                                   </div>
                                 )}
 
-                                {Array.isArray(pathaoTracking.data?.log || pathaoTracking.log) && (pathaoTracking.data?.log || pathaoTracking.log).length > 0 && (
-                                  <div className="mt-2">
-                                    <div className="text-xs text-muted-foreground mb-1">Latest Updates</div>
-                                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                                      {(pathaoTracking.data?.log || pathaoTracking.log).map((log: any, idx: number) => (
-                                        <div key={idx} className="flex gap-2 text-xs border-l-2 border-blue-200 pl-2">
-                                          <div className="flex-1">
-                                            <div className="font-medium">{log.desc}</div>
-                                            <div className="text-muted-foreground">{log.created_at}</div>
+                                {Array.isArray(
+                                  pathaoTracking.data?.log ||
+                                    pathaoTracking.log,
+                                ) &&
+                                  (
+                                    pathaoTracking.data?.log ||
+                                    pathaoTracking.log
+                                  ).length > 0 && (
+                                    <div className="mt-2">
+                                      <div className="text-xs text-muted-foreground mb-1">
+                                        Latest Updates
+                                      </div>
+                                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                                        {(
+                                          pathaoTracking.data?.log ||
+                                          pathaoTracking.log
+                                        ).map((log: any, idx: number) => (
+                                          <div
+                                            key={idx}
+                                            className="flex gap-2 text-xs border-l-2 border-blue-200 pl-2"
+                                          >
+                                            <div className="flex-1">
+                                              <div className="font-medium">
+                                                {log.desc}
+                                              </div>
+                                              <div className="text-muted-foreground">
+                                                {log.created_at}
+                                              </div>
+                                            </div>
                                           </div>
-                                        </div>
-                                      ))}
+                                        ))}
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
+                                  )}
                               </div>
                             ) : (
                               <div className="text-xs text-muted-foreground text-center py-2 bg-slate-50 rounded border">
@@ -1731,14 +2361,25 @@ ${brandConfig.name}`
                           </div>
                         )}
 
-                        {!selectedOrder.courierService.toLowerCase().includes('paperfly') &&
-                          !selectedOrder.courierService.toLowerCase().includes('steadfast') &&
-                          !selectedOrder.courierService.toLowerCase().includes('pathao') && (
+                        {!selectedOrder.courierService
+                          .toLowerCase()
+                          .includes("paperfly") &&
+                          !selectedOrder.courierService
+                            .toLowerCase()
+                            .includes("steadfast") &&
+                          !selectedOrder.courierService
+                            .toLowerCase()
+                            .includes("pathao") && (
                             <Button
                               variant="outline"
                               size="sm"
                               className="w-full"
-                              onClick={() => openCourierSearch(selectedOrder.courierService || "", selectedOrder.trackingNumber || "")}
+                              onClick={() =>
+                                openCourierSearch(
+                                  selectedOrder.courierService || "",
+                                  selectedOrder.trackingNumber || "",
+                                )
+                              }
                             >
                               <ExternalLink className="h-4 w-4 mr-2" />
                               Track on {selectedOrder.courierService}
@@ -1751,18 +2392,29 @@ ${brandConfig.name}`
               ) : (
                 <div className="text-center py-8">
                   <Truck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">N/A</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    N/A
+                  </h3>
                   <p className="text-gray-600 dark:text-gray-300 mb-4">
-                    This order hasn't been shipped yet or tracking information hasn't been added.
+                    This order hasn't been shipped yet or tracking information
+                    hasn't been added.
                   </p>
-                  {selectedOrder.status === 'pending' && (
-                    <p className="text-sm text-amber-600">Order is currently pending. It will be processed soon.</p>
+                  {selectedOrder.status === "pending" && (
+                    <p className="text-sm text-amber-600">
+                      Order is currently pending. It will be processed soon.
+                    </p>
                   )}
-                  {selectedOrder.status === 'processing' && (
-                    <p className="text-sm text-blue-600">Order is being processed. Tracking details will be updated once shipped.</p>
+                  {selectedOrder.status === "processing" && (
+                    <p className="text-sm text-blue-600">
+                      Order is being processed. Tracking details will be updated
+                      once shipped.
+                    </p>
                   )}
-                  {selectedOrder.status === 'confirmed' && (
-                    <p className="text-sm text-blue-600">Order is confirmed. Tracking details will be updated once shipped.</p>
+                  {selectedOrder.status === "confirmed" && (
+                    <p className="text-sm text-blue-600">
+                      Order is confirmed. Tracking details will be updated once
+                      shipped.
+                    </p>
                   )}
                   <div className="flex flex-col gap-2 mt-4">
                     <Button
@@ -1781,7 +2433,7 @@ ${brandConfig.name}`
                       onClick={() => {
                         // Close this dialog and navigate to delivery page to create a new delivery
                         setShowTrackDialog(false);
-                        window.location.href = '/delivery';
+                        window.location.href = "/delivery";
                       }}
                     >
                       <Truck className="h-4 w-4 mr-2" />
@@ -1793,10 +2445,16 @@ ${brandConfig.name}`
 
               {selectedOrder.shippingAddress && (
                 <div className="border-t pt-4 dark:border-gray-700">
-                  <Label className="text-gray-800 dark:text-gray-200">Shipping Address</Label>
+                  <Label className="text-gray-800 dark:text-gray-200">
+                    Shipping Address
+                  </Label>
                   <div className="text-sm space-y-1 mt-1 text-gray-600 dark:text-gray-300">
                     <p>{selectedOrder.shippingAddress}</p>
-                    <p>{selectedOrder.shippingCity}, {selectedOrder.shippingState} {selectedOrder.shippingZipCode}</p>
+                    <p>
+                      {selectedOrder.shippingCity},{" "}
+                      {selectedOrder.shippingState}{" "}
+                      {selectedOrder.shippingZipCode}
+                    </p>
                     <p>{selectedOrder.shippingCountry}</p>
                   </div>
                 </div>
@@ -1818,12 +2476,17 @@ ${brandConfig.name}`
           <div className="space-y-4">
             <div>
               <Label htmlFor="smsType">Message Type</Label>
-              <Select value={bulkSMSType} onValueChange={(value: any) => setBulkSMSType(value)}>
+              <Select
+                value={bulkSMSType}
+                onValueChange={(value: any) => setBulkSMSType(value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select message type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="confirmation">Order Confirmation</SelectItem>
+                  <SelectItem value="confirmation">
+                    Order Confirmation
+                  </SelectItem>
                   <SelectItem value="invoice">Invoice Notification</SelectItem>
                   <SelectItem value="custom">Custom Message</SelectItem>
                 </SelectContent>
@@ -1841,7 +2504,8 @@ ${brandConfig.name}`
                 className="resize-none"
               />
               <div className="text-sm text-muted-foreground mt-2">
-                Available placeholders: {"{customerName}"}, {"{orderNumber}"}, {"{total}"}, {"{status}"}, {"{paymentStatus}"}
+                Available placeholders: {"{customerName}"}, {"{orderNumber}"},{" "}
+                {"{total}"}, {"{status}"}, {"{paymentStatus}"}
               </div>
             </div>
 
@@ -1849,27 +2513,36 @@ ${brandConfig.name}`
               <h4 className="font-medium text-blue-900 mb-2">Preview</h4>
               <p className="text-sm text-blue-800">
                 {bulkSMSMessage
-                  .replace('{customerName}', 'John Doe')
-                  .replace('{orderNumber}', 'ORD-001')
-                  .replace('{total}', '৳1,500')
-                  .replace('{status}', 'CONFIRMED')
-                  .replace('{paymentStatus}', 'PAID')
-                }
+                  .replace("{customerName}", "John Doe")
+                  .replace("{orderNumber}", "ORD-001")
+                  .replace("{total}", "৳1,500")
+                  .replace("{status}", "CONFIRMED")
+                  .replace("{paymentStatus}", "PAID")}
               </p>
             </div>
 
             <div className="bg-yellow-50 p-4 rounded-lg">
               <h4 className="font-medium text-yellow-900 mb-2">Important</h4>
               <ul className="text-sm text-yellow-800 space-y-1">
-                <li>• SMS will only be sent to orders with valid phone numbers</li>
+                <li>
+                  • SMS will only be sent to orders with valid phone numbers
+                </li>
                 <li>• Each SMS costs approximately ৳0.50</li>
-                <li>• Messages will be sent with a 0.5-second delay between each</li>
-                <li>• Total estimated cost: ৳{(selectedOrders.length * 0.5).toFixed(2)}</li>
+                <li>
+                  • Messages will be sent with a 0.5-second delay between each
+                </li>
+                <li>
+                  • Total estimated cost: ৳
+                  {(selectedOrders.length * 0.5).toFixed(2)}
+                </li>
               </ul>
             </div>
 
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setShowBulkSMSDialog(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowBulkSMSDialog(false)}
+              >
                 Cancel
               </Button>
               <Button
@@ -1894,27 +2567,38 @@ ${brandConfig.name}`
       </Dialog>
 
       {/* Bulk Delete Dialog */}
-      <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+      <Dialog
+        open={showBulkDeleteDialog}
+        onOpenChange={setShowBulkDeleteDialog}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Selected Orders</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {selectedOrders.length} selected orders? This action cannot be undone.
+              Are you sure you want to delete {selectedOrders.length} selected
+              orders? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
               <h4 className="font-medium text-red-900 mb-2">Warning</h4>
               <ul className="text-sm text-red-800 space-y-1">
-                <li>• This action will permanently delete the selected orders</li>
+                <li>
+                  • This action will permanently delete the selected orders
+                </li>
                 <li>• All order history and associated data will be lost</li>
-                <li>• Customer records and product inventory will remain intact</li>
+                <li>
+                  • Customer records and product inventory will remain intact
+                </li>
                 <li>• This action cannot be reversed</li>
               </ul>
             </div>
 
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setShowBulkDeleteDialog(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowBulkDeleteDialog(false)}
+              >
                 Cancel
               </Button>
               <Button
@@ -1958,13 +2642,29 @@ ${brandConfig.name}`
               {/* Order Overview */}
               <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
-                  <h4 className="font-semibold text-sm text-gray-600">ORDER NUMBER</h4>
-                  <p className="font-bold text-lg">{paperflyTrackingData.order_number}</p>
+                  <h4 className="font-semibold text-sm text-gray-600">
+                    ORDER NUMBER
+                  </h4>
+                  <p className="font-bold text-lg">
+                    {paperflyTrackingData.order_number}
+                  </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-gray-600">STATUS</h4>
-                  <Badge variant={paperflyTrackingData.status === 'Delivered' ? 'default' : 'secondary'}
-                    className={paperflyTrackingData.status === 'Delivered' ? 'bg-green-100 text-green-800' : ''}>
+                  <h4 className="font-semibold text-sm text-gray-600">
+                    STATUS
+                  </h4>
+                  <Badge
+                    variant={
+                      paperflyTrackingData.status === "Delivered"
+                        ? "default"
+                        : "secondary"
+                    }
+                    className={
+                      paperflyTrackingData.status === "Delivered"
+                        ? "bg-green-100 text-green-800"
+                        : ""
+                    }
+                  >
                     {paperflyTrackingData.status}
                   </Badge>
                 </div>
@@ -1972,38 +2672,72 @@ ${brandConfig.name}`
 
               {/* Package Information */}
               <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900">Package Information</h4>
+                <h4 className="font-semibold text-gray-900">
+                  Package Information
+                </h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="font-medium text-gray-600">Description:</span>
-                    <p>{paperflyTrackingData.package?.package_description || 'N/A'}</p>
+                    <span className="font-medium text-gray-600">
+                      Description:
+                    </span>
+                    <p>
+                      {paperflyTrackingData.package?.package_description ||
+                        "N/A"}
+                    </p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-600">Weight:</span>
-                    <p>{paperflyTrackingData.package?.merchant_provide_weight || 'N/A'} kg</p>
+                    <p>
+                      {paperflyTrackingData.package?.merchant_provide_weight ||
+                        "N/A"}{" "}
+                      kg
+                    </p>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-600">Package Option:</span>
-                    <p className="capitalize">{paperflyTrackingData.package?.package_option || 'N/A'}</p>
+                    <span className="font-medium text-gray-600">
+                      Package Option:
+                    </span>
+                    <p className="capitalize">
+                      {paperflyTrackingData.package?.package_option || "N/A"}
+                    </p>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-600">Merchant Ref:</span>
-                    <p>{paperflyTrackingData.package?.merchant_order_ref || 'N/A'}</p>
+                    <span className="font-medium text-gray-600">
+                      Merchant Ref:
+                    </span>
+                    <p>
+                      {paperflyTrackingData.package?.merchant_order_ref ||
+                        "N/A"}
+                    </p>
                   </div>
                 </div>
               </div>
 
               {/* Payment Information */}
               <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900">Payment Information</h4>
+                <h4 className="font-semibold text-gray-900">
+                  Payment Information
+                </h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="font-medium text-gray-600">Collectable Amount:</span>
-                    <p className="font-semibold">৳{paperflyTrackingData.package?.collectable_amount?.toLocaleString() || '0'}</p>
+                    <span className="font-medium text-gray-600">
+                      Collectable Amount:
+                    </span>
+                    <p className="font-semibold">
+                      ৳
+                      {paperflyTrackingData.package?.collectable_amount?.toLocaleString() ||
+                        "0"}
+                    </p>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-600">Collected Amount:</span>
-                    <p className="font-semibold text-green-600">৳{paperflyTrackingData.package?.collected_amount?.toLocaleString() || '0'}</p>
+                    <span className="font-medium text-gray-600">
+                      Collected Amount:
+                    </span>
+                    <p className="font-semibold text-green-600">
+                      ৳
+                      {paperflyTrackingData.package?.collected_amount?.toLocaleString() ||
+                        "0"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -2013,46 +2747,81 @@ ${brandConfig.name}`
                 <div className="space-y-3">
                   <h4 className="font-semibold text-gray-900">Sender</h4>
                   <div className="text-sm space-y-1">
-                    <p><span className="font-medium">Name:</span> {paperflyTrackingData.sender?.full_name || 'N/A'}</p>
-                    <p><span className="font-medium">Phone:</span> {paperflyTrackingData.sender?.phone_number || 'N/A'}</p>
-                    <p><span className="font-medium">Location:</span> {paperflyTrackingData.sender?.thana_name || 'N/A'}, {paperflyTrackingData.sender?.district || 'N/A'}</p>
+                    <p>
+                      <span className="font-medium">Name:</span>{" "}
+                      {paperflyTrackingData.sender?.full_name || "N/A"}
+                    </p>
+                    <p>
+                      <span className="font-medium">Phone:</span>{" "}
+                      {paperflyTrackingData.sender?.phone_number || "N/A"}
+                    </p>
+                    <p>
+                      <span className="font-medium">Location:</span>{" "}
+                      {paperflyTrackingData.sender?.thana_name || "N/A"},{" "}
+                      {paperflyTrackingData.sender?.district || "N/A"}
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-3">
                   <h4 className="font-semibold text-gray-900">Receiver</h4>
                   <div className="text-sm space-y-1">
-                    <p><span className="font-medium">Name:</span> {paperflyTrackingData.receiver?.full_name || 'N/A'}</p>
-                    <p><span className="font-medium">Phone:</span> {paperflyTrackingData.receiver?.phone_number || 'N/A'}</p>
-                    <p><span className="font-medium">Location:</span> {paperflyTrackingData.receiver?.thana_name || 'N/A'}, {paperflyTrackingData.receiver?.district || 'N/A'}</p>
-                    <p><span className="font-medium">Address:</span> {paperflyTrackingData.receiver?.address_line || 'N/A'}</p>
+                    <p>
+                      <span className="font-medium">Name:</span>{" "}
+                      {paperflyTrackingData.receiver?.full_name || "N/A"}
+                    </p>
+                    <p>
+                      <span className="font-medium">Phone:</span>{" "}
+                      {paperflyTrackingData.receiver?.phone_number || "N/A"}
+                    </p>
+                    <p>
+                      <span className="font-medium">Location:</span>{" "}
+                      {paperflyTrackingData.receiver?.thana_name || "N/A"},{" "}
+                      {paperflyTrackingData.receiver?.district || "N/A"}
+                    </p>
+                    <p>
+                      <span className="font-medium">Address:</span>{" "}
+                      {paperflyTrackingData.receiver?.address_line || "N/A"}
+                    </p>
                   </div>
                 </div>
               </div>
 
               {/* Timeline */}
               <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900">Tracking Timeline</h4>
+                <h4 className="font-semibold text-gray-900">
+                  Tracking Timeline
+                </h4>
                 <div className="space-y-3 max-h-60 overflow-y-auto">
-                  {paperflyTrackingData.timeline?.map((event: any, index: number) => (
-                    <div key={index} className="flex gap-3 p-3 border rounded-lg">
-                      <div className="flex-shrink-0">
-                        <div className={`w-3 h-3 rounded-full mt-1 ${index === 0 ? 'bg-green-500' : 'bg-blue-500'
-                          }`} />
+                  {paperflyTrackingData.timeline?.map(
+                    (event: any, index: number) => (
+                      <div
+                        key={index}
+                        className="flex gap-3 p-3 border rounded-lg"
+                      >
+                        <div className="flex-shrink-0">
+                          <div
+                            className={`w-3 h-3 rounded-full mt-1 ${
+                              index === 0 ? "bg-green-500" : "bg-blue-500"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900">
+                            {event.message}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(event.date_time).toLocaleString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">{event.message}</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(event.date_time).toLocaleString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    ),
+                  )}
                 </div>
               </div>
 
@@ -2060,13 +2829,20 @@ ${brandConfig.name}`
               <div className="flex gap-2 pt-4 border-t">
                 <Button
                   variant="outline"
-                  onClick={() => openPaperflyMerchantTracking(String(paperflyTrackingData.order_number || ""))}
+                  onClick={() =>
+                    openPaperflyMerchantTracking(
+                      String(paperflyTrackingData.order_number || ""),
+                    )
+                  }
                   className="flex-1"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
                   View on Paperfly
                 </Button>
-                <Button variant="outline" onClick={() => setShowPaperflyDialog(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPaperflyDialog(false)}
+                >
                   Close
                 </Button>
               </div>
@@ -2083,5 +2859,5 @@ ${brandConfig.name}`
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

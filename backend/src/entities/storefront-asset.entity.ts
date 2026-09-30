@@ -6,9 +6,12 @@ import { Organization } from './organization.entity';
 export class StorefrontAsset {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({ type: 'uuid' }) organizationId: string;
+  @Column({ type: 'uuid', nullable: true }) siteId: string | null;
   @ManyToOne(() => Organization, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'organizationId' }) organization: Organization;
   @Column({ type: 'varchar', length: 500 }) url: string;
+  @Column({ type: 'varchar', length: 255, default: 'image' })
+  originalFilename: string;
   @Column({ type: 'varchar', length: 255, unique: true }) storageKey: string;
   @Column({ type: 'varchar', length: 32 }) mimeType: string;
   @Column({ type: 'int' }) size: number;
@@ -17,6 +20,10 @@ export class StorefrontAsset {
   @Column({ type: 'int', default: 0 }) sortOrder: number;
   @Column({ type: 'varchar', length: 255, nullable: true }) altTextEn: string | null;
   @Column({ type: 'varchar', length: 255, nullable: true }) altTextBn: string | null;
+  @Column({ type: 'jsonb', default: () => `'{}'::jsonb` })
+  alt: Partial<Record<'en' | 'bn', string>>;
+  @Column({ type: 'boolean', default: false }) decorative: boolean;
+  @Column({ type: 'timestamp', nullable: true }) deletedAt: Date | null;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
 }

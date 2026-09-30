@@ -70,12 +70,20 @@ describe('WebsiteBuilder image sections', () => {
     expect(screen.getByRole('button', { name: 'Save draft' })).toBeEnabled()
   })
 
-  it('clears the entire page after confirmation', async () => {
+  it('restores a removed section with undo', async () => {
     render(<WebsiteBuilder />)
     await screen.findByRole('button', { name: 'Image & text' })
-    fireEvent.click(screen.getByRole('button', { name: 'Delete page content' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Delete all sections' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Image & text section' }))
     expect(screen.queryByRole('button', { name: 'Image & text' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save draft' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(screen.getByRole('button', { name: 'Image & text' })).toBeInTheDocument()
+  })
+
+  it('offers guided, template, and blank page creation', async () => {
+    render(<WebsiteBuilder />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Create page' }))
+    expect(screen.getByRole('button', { name: /Guide me/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Use a template/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Start blank/ })).toBeInTheDocument()
   })
 })

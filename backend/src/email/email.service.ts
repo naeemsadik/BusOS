@@ -5,12 +5,22 @@ import * as nodemailer from 'nodemailer';
 @Injectable()
 export class EmailService {
   private transporter: nodemailer.Transporter;
+  private usesJsonTransport = false;
 
   constructor(private configService: ConfigService) {
     this.createTransporter();
   }
 
   private createTransporter() {
+    const jsonTransport =
+      this.configService.get<string>('EMAIL_TRANSPORT') === 'json' &&
+      (this.configService.get<string>('NODE_ENV') !== 'production' ||
+        this.configService.get<string>('BUSOS_ALLOW_TEST_RESET') === 'true');
+    if (jsonTransport) {
+      this.usesJsonTransport = true;
+      this.transporter = nodemailer.createTransport({ jsonTransport: true });
+      return;
+    }
     const smtpHost = this.configService.get<string>('SMTP_HOST');
     const smtpPort = Number(this.configService.get<string>('SMTP_PORT', '587'));
     const smtpUser = this.configService.get<string>('SMTP_USER');
@@ -19,7 +29,8 @@ export class EmailService {
     const smtpRequireTls = this.configService.get<string>('SMTP_REQUIRE_TLS', 'false') === 'true';
 
     // Check if required SMTP configuration is provided
-    if (!smtpHost || !smtpUser || !smtpPassword) {
+    const smtpConfigured = Boolean(smtpHost && smtpUser && smtpPassword);
+    if (!smtpConfigured) {
       console.warn('SMTP configuration is incomplete. Email functionality will be limited.');
       console.warn('Missing:', {
         SMTP_HOST: !smtpHost,
@@ -47,7 +58,7 @@ export class EmailService {
     });
 
     // Verify connection configuration
-    this.verifyConnection();
+    if (smtpConfigured) this.verifyConnection();
   }
 
   private async verifyConnection() {
@@ -64,7 +75,7 @@ export class EmailService {
     const smtpUser = this.configService.get<string>('SMTP_USER');
     const smtpPassword = this.configService.get<string>('SMTP_PASSWORD');
 
-    if (!smtpHost || !smtpUser || !smtpPassword) {
+    if (!this.usesJsonTransport && (!smtpHost || !smtpUser || !smtpPassword)) {
       throw new Error('Email service is not configured. Please contact support.');
     }
 
