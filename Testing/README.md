@@ -54,6 +54,9 @@ Useful focused runs:
 # Owner and staff areas in a visible Edge window
 .\run-tests.ps1 -Browser edge -Headed -Marker "owner or staff"
 
+# Keep each completed test visible for 10 seconds
+.\run-tests.ps1 -Browser chrome -Headed -Pause 10
+
 # Admin portal
 .\run-tests.ps1 -Marker "admin"
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import time
 from pathlib import Path
 
 import pytest
@@ -53,6 +54,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
     headless = env("BUSOS_E2E_HEADLESS", "true").lower() in {"1", "true", "yes", "on"}
     group.addoption("--busos-headed", action="store_true", default=not headless)
+    group.addoption("--busos-pause", type=float, default=float(env("BUSOS_E2E_PAUSE", "3")))
 
 
 @pytest.fixture(scope="session")
@@ -121,6 +123,8 @@ def browser(request: pytest.FixtureRequest, pytestconfig: pytest.Config):
         name = re.sub(r"[^A-Za-z0-9_.-]+", "_", request.node.nodeid)
         driver.save_screenshot(str(ARTIFACTS / f"{name}.png"))
         (ARTIFACTS / f"{name}.html").write_text(driver.page_source, encoding="utf-8")
+    if report and not report.skipped and pytestconfig.getoption("--busos-headed"):
+        time.sleep(max(0, pytestconfig.getoption("--busos-pause")))
     driver.quit()
 
 

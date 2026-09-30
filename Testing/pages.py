@@ -40,7 +40,15 @@ class Page:
         assert overflow <= tolerance, f"Page overflows horizontally by {overflow}px"
 
     def assert_no_next_error(self) -> None:
-        assert not self.driver.find_elements(By.CSS_SELECTOR, "nextjs-portal"), "Next.js error overlay is visible"
+        overlays = [
+            self.driver.execute_script(
+                "return arguments[0].shadowRoot && "
+                "arguments[0].shadowRoot.querySelector('[data-nextjs-dialog-overlay]')",
+                portal,
+            )
+            for portal in self.driver.find_elements(By.CSS_SELECTOR, "nextjs-portal")
+        ]
+        assert not any(overlays), "Next.js error overlay is visible"
 
 
 class LoginPage(Page):

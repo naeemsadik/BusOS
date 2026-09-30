@@ -3,6 +3,7 @@ param(
     [ValidateSet("chrome", "firefox", "edge")]
     [string]$Browser = "chrome",
     [string]$Marker = "",
+    [double]$Pause = 3,
     [switch]$Headed,
     [switch]$Install
 )
@@ -15,7 +16,7 @@ try {
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
 
-    $pytestArgs = @("-m", "pytest", "--busos-browser", $Browser)
+    $pytestArgs = @("-m", "pytest", "--busos-browser", $Browser, "--busos-pause", $Pause)
     if ($Headed) { $pytestArgs += "--busos-headed" }
     if ($Marker) { $pytestArgs += @("-m", $Marker) }
     python @pytestArgs
