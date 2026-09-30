@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 
 
 ROOT = Path(__file__).parent
@@ -119,13 +120,19 @@ def browser(request: pytest.FixtureRequest, pytestconfig: pytest.Config):
 
     report = getattr(request.node, "rep_call", None)
     if report and report.failed:
-        ARTIFACTS.mkdir(exist_ok=True)
-        name = re.sub(r"[^A-Za-z0-9_.-]+", "_", request.node.nodeid)
-        driver.save_screenshot(str(ARTIFACTS / f"{name}.png"))
-        (ARTIFACTS / f"{name}.html").write_text(driver.page_source, encoding="utf-8")
+        try:
+            ARTIFACTS.mkdir(exist_ok=True)
+            name = re.sub(r"[^A-Za-z0-9_.-]+", "_", request.node.nodeid)
+            driver.save_screenshot(str(ARTIFACTS / f"{name}.png"))
+            (ARTIFACTS / f"{name}.html").write_text(driver.page_source, encoding="utf-8")
+        except WebDriverException:
+            pass
     if report and not report.skipped and pytestconfig.getoption("--busos-headed"):
         time.sleep(max(0, pytestconfig.getoption("--busos-pause")))
-    driver.quit()
+    try:
+        driver.quit()
+    except WebDriverException:
+        pass
 
 
 @pytest.hookimpl(hookwrapper=True)

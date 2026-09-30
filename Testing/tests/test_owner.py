@@ -1,4 +1,5 @@
 import pytest
+from selenium.common.exceptions import InvalidSessionIdException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as expected
 from selenium.webdriver.support.ui import WebDriverWait
@@ -47,6 +48,8 @@ def test_owner_can_open_every_application_module(browser, base_url, timeout):
             heading = page.heading()
             assert heading.text.strip(), "Page heading is empty"
             page.assert_no_next_error()
+        except InvalidSessionIdException as exception:
+            pytest.fail(f"Chrome disconnected while checking {path}: {exception.msg}")
         except Exception as exception:
             failures.append(f"{path}: {exception}")
 
