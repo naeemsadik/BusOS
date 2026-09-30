@@ -8,8 +8,14 @@ services:
       SERVICE_URL_BACKEND_5000: /
       NODE_ENV: production
       PORT: "5000"
-      DATABASE_URL: ${DATABASE_URL:?}
-      DATABASE_SCHEMA: public
+      DATABASE_HOST: ${DATABASE_HOST:?}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_USERNAME: ${DATABASE_USERNAME:?}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?}
+      DATABASE_NAME: ${DATABASE_NAME:-neondb}
+      DATABASE_SCHEMA: ${DATABASE_SCHEMA:-public}
+      DATABASE_SSL: ${DATABASE_SSL:-true}
+      DATABASE_SSL_REJECT_UNAUTHORIZED: ${DATABASE_SSL_REJECT_UNAUTHORIZED:-true}
       TYPEORM_MIGRATIONS_RUN: "false"
       BACKEND_URL: ${SERVICE_URL_BACKEND_5000:-}
       FRONTEND_URL: ${SERVICE_URL_FRONTEND_3000:-}
@@ -35,10 +41,10 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:?}
       FROM_NAME: BusOS
       FROM_EMAIL: ${SMTP_USER:?}
-      AI_API_KEY: ""
-      SMS_BASE_URL: https://bulksmsbd.net/api
-      SMS_API_KEY: ""
-      SMS_SENDER_ID: ""
+      AI_API_KEY: ${AI_API_KEY:-}
+      SMS_BASE_URL: ${SMS_BASE_URL:-https://bulksmsbd.net/api}
+      SMS_API_KEY: ${SMS_API_KEY:-}
+      SMS_SENDER_ID: ${SMS_SENDER_ID:-}
       BKASH_BASE_URL: https://tokenized.pay.bka.sh/v1.2.0-beta
       BKASH_APP_KEY: ""
       BKASH_APP_SECRET: ""
