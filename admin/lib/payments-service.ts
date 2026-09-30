@@ -29,11 +29,15 @@ export interface PaymentRefundRequest {
   reason: string;
 }
 
+type PaymentsResponse = Payment[] | { payments: Payment[]; total: number };
+
 export const PaymentsService = {
   // Get all payments (admin only)
   async getPayments(): Promise<Payment[]> {
-    const response = await api.get<Payment[]>('/admin/payments');
-    return response.data;
+    const response = await api.get<PaymentsResponse>('/admin/payments');
+    const payments = Array.isArray(response.data) ? response.data : response.data.payments;
+    if (!Array.isArray(payments)) throw new Error('Invalid payments response');
+    return payments;
   },
 
   // Get payment by ID
