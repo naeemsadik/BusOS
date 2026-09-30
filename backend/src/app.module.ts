@@ -73,24 +73,33 @@ import {
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DATABASE_HOST'),
-        port: configService.get('DATABASE_PORT'),
-        username: configService.get('DATABASE_USERNAME'),
-        password: configService.get('DATABASE_PASSWORD'),
-        database: configService.get('DATABASE_NAME'),
-        schema: configService.get('DATABASE_SCHEMA'),
-        ssl: configService.get('DATABASE_SSL') === 'true' ? {
-          rejectUnauthorized: configService.get('DATABASE_SSL_REJECT_UNAUTHORIZED') !== 'false',
-        } : false,
-        entities: [User, Organization, Subscription, SubscriptionPlanEntity, Invitation, Admin, Product, Category, StockMovement, Customer, Order, OrderItem, Invoice, InvoiceItem, Expense, Delivery, Supplier, BkashPayment, SslcommerzPayment, SmsBalance, SmsPackage, SmsLog, SmsSettings, UserPermission, StorefrontSite, StorefrontAsset, Attendance, Department, Designation, Employee, EmployeeCompensation, Holiday, HrmAuditLog, HrmSettings, PayrollItem, PayrollRun],
-        migrations: [__dirname + '/migrations/*{.ts,.js}'],
-        migrationsTransactionMode: 'each',
-        migrationsRun: configService.get('TYPEORM_MIGRATIONS_RUN') === 'true',
-        synchronize: false,
-        logging: false,
-      }),
+      useFactory: (configService: ConfigService) => {
+        const databaseUrl = configService.get<string>('DATABASE_URL');
+        const connection = databaseUrl
+          ? { url: databaseUrl }
+          : {
+              host: configService.get('DATABASE_HOST'),
+              port: Number(configService.get('DATABASE_PORT') || 5432),
+              username: configService.get('DATABASE_USERNAME'),
+              password: configService.get('DATABASE_PASSWORD'),
+              database: configService.get('DATABASE_NAME'),
+              ssl: configService.get('DATABASE_SSL') === 'true' ? {
+                rejectUnauthorized: configService.get('DATABASE_SSL_REJECT_UNAUTHORIZED') !== 'false',
+              } : false,
+            };
+
+        return {
+          type: 'postgres' as const,
+          ...connection,
+          schema: configService.get('DATABASE_SCHEMA', 'public'),
+          entities: [User, Organization, Subscription, SubscriptionPlanEntity, Invitation, Admin, Product, Category, StockMovement, Customer, Order, OrderItem, Invoice, InvoiceItem, Expense, Delivery, Supplier, BkashPayment, SslcommerzPayment, SmsBalance, SmsPackage, SmsLog, SmsSettings, UserPermission, StorefrontSite, StorefrontAsset, Attendance, Department, Designation, Employee, EmployeeCompensation, Holiday, HrmAuditLog, HrmSettings, PayrollItem, PayrollRun],
+          migrations: [__dirname + '/migrations/*{.ts,.js}'],
+          migrationsTransactionMode: 'each' as const,
+          migrationsRun: configService.get('TYPEORM_MIGRATIONS_RUN') === 'true',
+          synchronize: false,
+          logging: false,
+        };
+      },
       inject: [ConfigService],
     }),
     ScheduleModule.forRoot(),

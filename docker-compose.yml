@@ -1,0 +1,137 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend
+    environment:
+      SERVICE_URL_BACKEND_5000: /
+      NODE_ENV: production
+      PORT: "5000"
+      DATABASE_URL: ${DATABASE_URL:?Add the Neon connection URL in Coolify}
+      DATABASE_SCHEMA: public
+      TYPEORM_MIGRATIONS_RUN: "false"
+      BACKEND_URL: ${SERVICE_URL_BACKEND_5000}
+      FRONTEND_URL: ${SERVICE_URL_FRONTEND_3000}
+      FRONTEND_1_URL: ${SERVICE_URL_FRONTEND_3000}
+      FRONTEND_2_URL: ${SERVICE_URL_ADMIN_3001}
+      STOREFRONT_ROOT_DOMAIN: ${SERVICE_FQDN_FRONTEND_3000}
+      STOREFRONT_UPLOAD_DIR: /app/uploads/storefront
+      STOREFRONT_REVALIDATE_SECRET: ${SERVICE_PASSWORD_64_STOREFRONT_REVALIDATION}
+      CONFIRMATION_TOKEN_SECRET: ${SERVICE_PASSWORD_64_ORDER_CONFIRMATION}
+      JWT_SECRET: ${SERVICE_REALBASE64_64_JWT}
+      JWT_EXPIRES_IN: 7d
+      BCRYPT_ROUNDS: "12"
+      ADMIN_USERNAME: admin
+      ADMIN_EMAIL: ${SMTP_USER:?Add the MailBux mailbox address in Coolify}
+      ADMIN_PASSWORD: ${SERVICE_PASSWORD_64_ADMIN_LOGIN}
+      ADMIN_FIRST_NAME: System
+      ADMIN_LAST_NAME: Administrator
+      SMTP_HOST: my.mailbux.com
+      SMTP_PORT: "587"
+      SMTP_SECURE: "false"
+      SMTP_REQUIRE_TLS: "true"
+      SMTP_USER: ${SMTP_USER:?Add the MailBux mailbox address in Coolify}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?Add the MailBux mailbox or app password in Coolify}
+      FROM_NAME: BusOS
+      FROM_EMAIL: ${SMTP_USER:?Add the MailBux mailbox address in Coolify}
+      AI_API_KEY: ""
+      SMS_BASE_URL: https://bulksmsbd.net/api
+      SMS_API_KEY: ""
+      SMS_SENDER_ID: ""
+      BKASH_BASE_URL: https://tokenized.pay.bka.sh/v1.2.0-beta
+      BKASH_APP_KEY: ""
+      BKASH_APP_SECRET: ""
+      BKASH_USERNAME: ""
+      BKASH_PASSWORD: ""
+      BKASH_CALLBACK_URL: ${SERVICE_URL_FRONTEND_3000}/payments/bkash/callback
+      SSLCOMMERZ_STORE_ID: ""
+      SSLCOMMERZ_STORE_PASSWORD: ""
+      SSLCOMMERZ_IS_LIVE: "false"
+    volumes:
+      - storefront_uploads:/app/uploads/storefront
+    expose:
+      - "5000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend
+      args:
+        NEXT_PUBLIC_STOREFRONT_ROOT_DOMAIN: ${SERVICE_FQDN_FRONTEND_3000}
+        NEXT_PUBLIC_BRAND_NAME: BusOS
+    environment:
+      SERVICE_URL_FRONTEND_3000: /
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      BACKEND_INTERNAL_URL: http://backend:5000
+      NEXT_PUBLIC_API_URL: ${SERVICE_URL_BACKEND_5000}
+      STOREFRONT_ROOT_DOMAIN: ${SERVICE_FQDN_FRONTEND_3000}
+      NEXT_PUBLIC_STOREFRONT_ROOT_DOMAIN: ${SERVICE_FQDN_FRONTEND_3000}
+      STOREFRONT_REVALIDATE_SECRET: ${SERVICE_PASSWORD_64_STOREFRONT_REVALIDATION}
+      NEXT_PUBLIC_BRAND_NAME: BusOS
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: admin
+    environment:
+      SERVICE_URL_ADMIN_3001: /
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: "3001"
+      BACKEND_INTERNAL_URL: http://backend:5000
+      NEXT_PUBLIC_API_URL: ${SERVICE_URL_BACKEND_5000}
+      NEXT_PUBLIC_ENABLE_FIXTURES: "false"
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  storefront_uploads:

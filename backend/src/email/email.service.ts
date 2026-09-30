@@ -12,10 +12,11 @@ export class EmailService {
 
   private createTransporter() {
     const smtpHost = this.configService.get<string>('SMTP_HOST');
-    const smtpPort = this.configService.get<number>('SMTP_PORT', 587);
+    const smtpPort = Number(this.configService.get<string>('SMTP_PORT', '587'));
     const smtpUser = this.configService.get<string>('SMTP_USER');
     const smtpPassword = this.configService.get<string>('SMTP_PASSWORD');
-    const smtpSecure = this.configService.get<boolean>('SMTP_SECURE', false);
+    const smtpSecure = this.configService.get<string>('SMTP_SECURE', 'false') === 'true';
+    const smtpRequireTls = this.configService.get<string>('SMTP_REQUIRE_TLS', 'false') === 'true';
 
     // Check if required SMTP configuration is provided
     if (!smtpHost || !smtpUser || !smtpPassword) {
@@ -32,14 +33,10 @@ export class EmailService {
       host: smtpHost,
       port: smtpPort,
       secure: smtpSecure, // true for 465, false for other ports
+      requireTLS: smtpRequireTls,
       auth: {
         user: smtpUser,
         pass: smtpPassword,
-      },
-      // Additional options for Gmail
-      tls: {
-        rejectUnauthorized: false,
-        ciphers: 'SSLv3'
       },
       // Connection timeout
       connectionTimeout: 60000, // 60 seconds

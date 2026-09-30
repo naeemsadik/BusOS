@@ -27,11 +27,11 @@ async function bootstrap() {
 
   // CORS configuration for multiple frontends
   const configuredOrigins = [
-    process.env.FRONTEND_1_URL || 'http://localhost:3000',
-    process.env.FRONTEND_2_URL || 'http://localhost:3001',
-    process.env.FRONTEND_3_URL || 'http://localhost:3002',
-    process.env.FRONTEND_4_URL || 'http://localhost:3003',
-  ].filter(Boolean); // Remove any undefined/null values
+    process.env.FRONTEND_1_URL,
+    process.env.FRONTEND_2_URL,
+    process.env.FRONTEND_3_URL,
+    process.env.FRONTEND_4_URL,
+  ].filter((origin): origin is string => Boolean(origin));
   const developmentLoopbackOrigins = process.env.NODE_ENV === 'production'
     ? []
     : [3000, 3001, 3002, 3003].flatMap(port => [
@@ -93,7 +93,7 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT || 5000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   
   console.log(`Application is running on: http://localhost:${port}`);
   console.log(`Swagger documentation: http://localhost:${port}/api/docs`);

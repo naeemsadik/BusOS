@@ -10,12 +10,9 @@ try {
 
 const { Admin } = require('../dist/entities/admin.entity');
 
-const requiredDatabaseVariables = [
-  'DATABASE_HOST',
-  'DATABASE_USERNAME',
-  'DATABASE_PASSWORD',
-  'DATABASE_NAME',
-];
+const requiredDatabaseVariables = process.env.DATABASE_URL
+  ? []
+  : ['DATABASE_HOST', 'DATABASE_USERNAME', 'DATABASE_PASSWORD', 'DATABASE_NAME'];
 const missingDatabaseVariables = requiredDatabaseVariables.filter(
   (name) => !process.env[name]?.trim(),
 );
@@ -27,23 +24,29 @@ if (missingDatabaseVariables.length > 0) {
   process.exit(1);
 }
 
+const connection = process.env.DATABASE_URL
+  ? { url: process.env.DATABASE_URL }
+  : {
+      host: process.env.DATABASE_HOST,
+      port: parseInt(process.env.DATABASE_PORT, 10) || 5432,
+      username: process.env.DATABASE_USERNAME,
+      password: process.env.DATABASE_PASSWORD,
+      database: process.env.DATABASE_NAME,
+      ssl:
+        process.env.DATABASE_SSL === 'true'
+          ? {
+              rejectUnauthorized:
+                process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false',
+            }
+          : false,
+    };
+
 const dataSource = new DataSource({
   type: 'postgres',
-  host: process.env.DATABASE_HOST,
-  port: parseInt(process.env.DATABASE_PORT, 10) || 5432,
-  username: process.env.DATABASE_USERNAME,
-  password: process.env.DATABASE_PASSWORD,
-  database: process.env.DATABASE_NAME,
+  ...connection,
   schema: process.env.DATABASE_SCHEMA || 'public',
-  synchronize: true,
+  synchronize: false,
   entities: [Admin],
-  ssl:
-    process.env.DATABASE_SSL === 'true'
-      ? {
-          rejectUnauthorized:
-            process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false',
-        }
-      : false,
 });
 
 async function createDefaultAdmin() {
