@@ -29,10 +29,6 @@ class Page:
     def heading(self):
         return self.visible(By.TAG_NAME, "h1")
 
-    def button(self, label: str):
-        xpath = f"//button[normalize-space()={label!r}]"
-        return self.visible(By.XPATH, xpath)
-
     def assert_path(self, expected_path: str) -> None:
         actual = urlparse(self.driver.current_url).path.rstrip("/") or "/"
         assert actual == (expected_path.rstrip("/") or "/")

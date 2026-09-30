@@ -5,7 +5,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as expected
 from selenium.webdriver.support.ui import WebDriverWait
 
-from conftest import env, require_env
+from conftest import require_env
 from pages import Page
 
 
